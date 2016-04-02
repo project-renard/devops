@@ -4,3 +4,4 @@ perlbrew install-cpanm
 perlbrew switch perl-5.20.3
 cd /home/vagrant/curie
 cpanm --installdeps .
+cpanm Dist::Zilla
