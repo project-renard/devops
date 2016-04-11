@@ -4,3 +4,5 @@ sudo apt-get -y install build-essential vim curl wget libgirepository1.0-dev lib
 sudo apt-get -y install gir1.2-gdl-3 libpoppler-glib-dev poppler-utils mupdf-tools git libglib-object-introspection-perl
 sudo apt-get -y install --no-install-recommends glade
 sudo apt-get -y install libssl-dev
+
+echo "export RENARD_TEST_DATA_PATH=~/test-data" >> /home/vagrant/.bashrc
