@@ -3,5 +3,9 @@ perlbrew install perl-5.20.3
 perlbrew install-cpanm
 perlbrew switch perl-5.20.3
 cd /home/vagrant/curie
+
+# do not run tests because these may fail when not in interactive shell
+cpanm --notest Term::ReadKey
+
 cpanm --installdeps .
 cpanm Dist::Zilla
