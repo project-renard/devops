@@ -107,11 +107,12 @@ renard_run_cover_on_branch () {
 	mkdir -p "$COVER_DIR"
 	COVER_DIR=$(cd $COVER_DIR && pwd)
 
-	export HARNESS_PERL_SWITCHES="-MDevel::Cover=-db,$COVER_DIR,+ignore,x?t/"
+	export HARNESS_PERL_SWITCHES="-MDevel::Cover=-db,$COVER_DIR,+ignore,^x?t/"
 	git co $BRANCH
 	cover $COVER_DIR -delete
-	prove -lvr t xt
-	cover $COVER_DIR +ignore '\bt/'
+	prove -lvr t # xt
+	cover $COVER_DIR -report html #+ignore '^x?t/'
+	cover $COVER_DIR -report vim  #+ignore '^x?t/'
 	see $COVER_DIR/coverage.html
 	export HARNESS_PERL_SWITCHES=""
 }
@@ -136,7 +137,7 @@ renard_run_cover_on_branch_dzil () {
 	mkdir -p "$COVER_DIR"
 	COVER_DIR=$(cd $COVER_DIR && pwd)
 
-	export HARNESS_PERL_SWITCHES="-MDevel::Cover=-db,$COVER_DIR,+ignore,x?t/"
+	export HARNESS_PERL_SWITCHES="-MDevel::Cover=-db,$COVER_DIR,+ignore,^x?t/"
 	git co $BRANCH
 	cover $COVER_DIR -delete
 	dzil test --all --keep
