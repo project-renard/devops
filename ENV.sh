@@ -107,14 +107,18 @@ renard_run_cover_on_branch () {
 	mkdir -p "$COVER_DIR"
 	COVER_DIR=$(cd $COVER_DIR && pwd)
 
-	export HARNESS_PERL_SWITCHES="-MDevel::Cover=-db,$COVER_DIR,+ignore,^x?t/"
-	git co $BRANCH
-	cover $COVER_DIR -delete
-	prove -lvr t # xt
-	cover $COVER_DIR -report html #+ignore '^x?t/'
-	cover $COVER_DIR -report vim  #+ignore '^x?t/'
-	see $COVER_DIR/coverage.html
-	export HARNESS_PERL_SWITCHES=""
+	if [ -z "$DEVEL_COVER_SILENT" ]; then
+		DEVEL_COVER_SILENT=1
+	fi
+	(
+		export HARNESS_PERL_SWITCHES="-MDevel::Cover=-db,$COVER_DIR,+ignore,^x?t/,-silent,$DEVEL_COVER_SILENT"
+		git co $BRANCH
+		cover $COVER_DIR -delete
+		prove -lvr t # xt
+		cover $COVER_DIR -report html #+ignore '^x?t/'
+		cover $COVER_DIR -report vim  #+ignore '^x?t/'
+		#see $COVER_DIR/coverage.html
+	)
 }
 
 ## renard_run_cover_on_branch_dzil
@@ -137,13 +141,14 @@ renard_run_cover_on_branch_dzil () {
 	mkdir -p "$COVER_DIR"
 	COVER_DIR=$(cd $COVER_DIR && pwd)
 
-	export HARNESS_PERL_SWITCHES="-MDevel::Cover=-db,$COVER_DIR,+ignore,^x?t/"
-	git co $BRANCH
-	cover $COVER_DIR -delete
-	dzil test --all --keep
-	( cd .build/latest && cover $COVER_DIR )
-	see $COVER_DIR/coverage.html
-	export HARNESS_PERL_SWITCHES=""
+	(
+		export HARNESS_PERL_SWITCHES="-MDevel::Cover=-db,$COVER_DIR,+ignore,^x?t/"
+		git co $BRANCH
+		cover $COVER_DIR -delete
+		dzil test --all --keep
+		( cd .build/latest && cover $COVER_DIR )
+		#see $COVER_DIR/coverage.html
+	)
 }
 
 
