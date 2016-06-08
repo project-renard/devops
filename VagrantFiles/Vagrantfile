@@ -1,9 +1,36 @@
+def debian_shell_provision( config )
+	config.vm.provision "shell", path: "./os-install-debian"
+	config.vm.provision :shell, privileged: false, path: "./perl-setup"
+	config.vm.provision :shell, privileged: false, path: "./cpan-setup"
+end
+
+org_toplevel = "../.." # /path/to/VagrantFiles/../..
+if Dir.exists?("../../../devops")
+	org_toplevel = "../../.." # the project-renard directory
+end
+
 Vagrant.configure(2) do |config|
-  config.vm.box = "debian/contrib-jessie64"
-  config.ssh.forward_x11 = true
-  config.vm.synced_folder "../../curie/", "/home/vagrant/curie/"
-  config.vm.synced_folder "../../test-data/", "/home/vagrant/test-data/"
-  config.vm.provision "shell", path: "./os-install-debian"
-  config.vm.provision :shell, privileged: false, path: "./perl-setup"
-  config.vm.provision :shell, privileged: false, path: "./cpan-setup"
+	for project_dir in %w[curie test-data devops] do
+		config.vm.synced_folder File.join(org_toplevel, project_dir), "/home/vagrant/project-renard/#{project_dir}"
+	end
+	config.ssh.forward_x11 = true
+
+	config.vm.define :trusty64, primary: true do |trusty|
+		trusty.vm.box = 'ubuntu/trusty64'
+		debian_shell_provision(trusty)
+	end
+
+	config.vm.define :jessie64, autostart: false do |jessie|
+		jessie.vm.box = "debian/contrib-jessie64"
+		debian_shell_provision(jessie)
+	end
+
+	config.vm.define :precise64, autostart: false do |precise|
+		precise.vm.box = "ubuntu/precise64"
+		debian_shell_provision(precise)
+	end
+
+	config.vm.define :osx, autostart: false do |osx|
+		osx.vm.box = "AndrewDryga/vagrant-box-osx"
+	end
 end
