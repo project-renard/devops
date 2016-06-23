@@ -30,7 +30,7 @@ _check_in_wrapper () {
 
 	_check_source_env_script_dir;
 	LAST_PART_OF_PATH=$(basename $RENARD_ENV_SCRIPT_DIR)
-	DIR_ABOVE_ENV_SCRIPT_DIR=$(cd .. && pwd)
+	DIR_ABOVE_ENV_SCRIPT_DIR=$(cd $RENARD_ENV_SCRIPT_DIR/.. && pwd)
 	if [ $(basename $DIR_ABOVE_ENV_SCRIPT_DIR) = $LAST_PART_OF_PATH ]; then
 		export RENARD_IN_WRAPPER=1
 	else
@@ -48,9 +48,9 @@ _check_directory_with_all_repos () {
 	_check_in_wrapper;
 	if [ $RENARD_IN_WRAPPER ]; then
 		# We are in the wrapper
-		export RENARD_ALL_REPO_DIR=$( cd ../.. && pwd )
+		export RENARD_ALL_REPO_DIR=$( cd $RENARD_ENV_SCRIPT_DIR/../.. && pwd )
 	else
-		export RENARD_ALL_REPO_DIR=$( cd .. && pwd )
+		export RENARD_ALL_REPO_DIR=$( cd $RENARD_ENV_SCRIPT_DIR/.. && pwd )
 	fi
 }
 
