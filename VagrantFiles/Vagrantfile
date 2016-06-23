@@ -1,7 +1,53 @@
+require "etc"
+
 def debian_shell_provision( config )
 	config.vm.provision "shell", path: "./os-install-debian"
 	config.vm.provision :shell, privileged: false, path: "./perl-setup"
 	config.vm.provision :shell, privileged: false, path: "./cpan-setup"
+end
+
+def create_and_add_ssh_key()
+	privkey_path = '.id_vagrant'
+	pubkey_path = '.id_vagrant.pub'
+	authorized_keys_path = File.expand_path("~/.ssh/authorized_keys")
+
+	if not File.exists?(privkey_path)
+		system('ssh-keygen -N "" -f .id_vagrant')
+		# add the current directory to the end
+		pubkey = File.readlines(pubkey_path)[0].chomp
+		File.write( pubkey_path,
+			"#{pubkey} #{File.absolute_path(pubkey_path)}\n" )
+	end
+
+	pubkey = File.readlines(pubkey_path)[0]
+	if not File.exists?(authorized_keys_path) or
+			not File.readlines(authorized_keys_path).include?(pubkey)
+		# append the key to the file
+		open(authorized_keys_path, 'a') do |f|
+			f.puts pubkey
+		end
+	end
+
+	privkey = File.readlines(privkey_path).join("")
+	return privkey
+end
+privkey = create_and_add_ssh_key()
+
+def add_synced_folders( config, org_toplevel, options = {} )
+	for project_dir in %w[curie test-data devops] do
+		host_dir = File.absolute_path(File.join(org_toplevel, project_dir))
+		guest_dir = "~/project-renard/#{project_dir}"
+		if options[:type] == 'sshfs'
+			config.vm.provision :shell, privileged: false, inline: <<SHELL
+if [ ! -d #{guest_dir} ]; then
+	mkdir -p #{guest_dir};
+	sshfs #{Etc.getlogin}@192.168.0.1:#{host_dir} #{guest_dir};
+fi
+SHELL
+		else
+			config.vm.synced_folder( host_dir, guest_dir )
+		end
+	end
 end
 
 org_toplevel = "../.." # /path/to/VagrantFiles/../..
@@ -10,27 +56,37 @@ if Dir.exists?("../../../devops")
 end
 
 Vagrant.configure(2) do |config|
-	for project_dir in %w[curie test-data devops] do
-		config.vm.synced_folder File.join(org_toplevel, project_dir), "/home/vagrant/project-renard/#{project_dir}"
-	end
 	config.ssh.forward_x11 = true
 
 	config.vm.define :trusty64, primary: true do |trusty|
 		trusty.vm.box = 'ubuntu/trusty64'
+		add_synced_folders( trusty, org_toplevel )
 		debian_shell_provision(trusty)
 	end
 
 	config.vm.define :jessie64, autostart: false do |jessie|
 		jessie.vm.box = "debian/contrib-jessie64"
+		add_synced_folders( jessie, org_toplevel )
 		debian_shell_provision(jessie)
 	end
 
 	config.vm.define :precise64, autostart: false do |precise|
 		precise.vm.box = "ubuntu/precise64"
+		add_synced_folders( precise, org_toplevel )
 		debian_shell_provision(precise)
 	end
 
 	config.vm.define :osx, autostart: false do |osx|
 		osx.vm.box = "AndrewDryga/vagrant-box-osx"
+		#osx.vm.network :private_network, ip: "192.168.0.0"
+		osx.vm.network "public_network"
+		osx.vm.provision :shell, privileged: false, inline: File.readlines('os-install-osx-sshfs').join("")
+		osx.vm.provision :shell, privileged: false, inline: <<SHELL
+echo '#{privkey}' > ~/.ssh/id_host
+chmod 600 ~/.ssh/id_host
+# force adding to ~/.ssh/known_hosts so no verification needed
+ssh -o StrictHostKeyChecking=no #{Etc.getlogin}@192.168.0.1 -n true
+SHELL
+		add_synced_folders( osx, org_toplevel, type: "sshfs" )
 	end
 end
