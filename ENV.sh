@@ -10,7 +10,8 @@ main() {
 _repo_dir () {
 	DIR_NAME="$1"
 	_check_directory_with_all_repos;
-	if [ "$RENARD_IN_WRAPPER" ]; then
+	_check_in_wrapper;
+	if [ 1 == "$RENARD_IN_WRAPPER" ]; then
 		echo "$RENARD_ALL_REPO_DIR/$DIR_NAME/$DIR_NAME"
 	else
 		echo "$RENARD_ALL_REPO_DIR/$DIR_NAME"
@@ -46,7 +47,7 @@ _check_directory_with_all_repos () {
 	fi
 
 	_check_in_wrapper;
-	if [ $RENARD_IN_WRAPPER ]; then
+	if [ 1 == "$RENARD_IN_WRAPPER" ]; then
 		# We are in the wrapper
 		export RENARD_ALL_REPO_DIR=$( cd $RENARD_ENV_SCRIPT_DIR/../.. && pwd )
 	else
@@ -100,7 +101,7 @@ renard_run_cover_on_branch () {
 	fi
 
 	COVER_DIR="cover_db/$BRANCH"
-	if [ "$RENARD_IN_WRAPPER" ]; then
+	if [ 1 == "$RENARD_IN_WRAPPER" ]; then
 		# move to directory above
 		COVER_DIR="../$COVER_DIR"
 	fi
@@ -134,7 +135,7 @@ renard_run_cover_on_branch_dzil () {
 	fi
 
 	COVER_DIR="cover_db/$BRANCH"
-	if [ "$RENARD_IN_WRAPPER" ]; then
+	if [ 1 == "$RENARD_IN_WRAPPER" ]; then
 		# move to directory above
 		COVER_DIR="../$COVER_DIR"
 	fi
