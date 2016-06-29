@@ -1,12 +1,15 @@
-#!/usr/bin/perl
+#!/usr/bin/env perl
 
 use Modern::Perl;
 use Path::Tiny;
 use Capture::Tiny qw(capture_stdout);
-use YAML::XS qw(DumpFile);
+use File::Copy;
+use YAML::XS qw(Dump Load);
+use Term::ProgressBar;
 
-sub main {
-	my $package_list_file = shift @ARGV or die "Need to pass path to package list";
+sub build_msys2_file_list {
+	my $package_list_file = shift @ARGV
+		or die "Need to pass path to package list\n";
 	$package_list_file = path( $package_list_file );
 
 	my @packages = $package_list_file->lines_utf8({ chomp => 1 });
@@ -45,8 +48,74 @@ sub main {
 		graphviz => $package_deps_graphviz,
 		files => $package_files,
 	};
-	DumpFile( "msys2-dep-files.yml", $output );
+	print Dump( $output );
+}
 
+sub get_list_of_files {
+	my $data = shift @_;
+
+	my @all_file_list;
+
+	PACKAGE:
+	while( my ($package, $file_list) = each %{ $data->{files} } ) {
+		next PACKAGE if $package =~ /python2/;
+		next PACKAGE if $package =~ /-(tcl|tk)$/;
+		next PACKAGE if $package =~ /-(dmake)$/;
+		FILE:
+		for my $file (@$file_list) {
+			next FILE if $file =~ m|/share/(gtk-)?doc/|;
+			next FILE if $file =~ m|/share/man/|;
+			next FILE if $file =~ /\.(c|h|html|pdf)$/;
+			next FILE if $file =~ /\.(gir)$/;
+			next FILE if $file =~ /\.(a)$/;
+
+			push @all_file_list, $file;
+		}
+	}
+
+	return \@all_file_list;
+}
+
+sub copy_files_to_prefix {
+	my $prefix = shift @ARGV
+		or die "Need to pass path to install prefix\n";
+
+	my $yaml_data = join "", <STDIN>;
+
+	my @all_file_list = @{ get_list_of_files(Load($yaml_data)) };
+
+	my $progress = Term::ProgressBar->new ({
+			name => "Copying package files",
+			ETA => 'linear',
+			count => scalar @all_file_list, });
+	my $processed_files = 0;
+
+	chomp( my $msys2_base = `cygpath -w /` );
+	for my $file (@all_file_list) {
+		my $source_path = path( $msys2_base, $file );
+		my $target_path = path( $prefix, $file );
+
+		if( -f $source_path && ! -r $target_path ) {
+			$target_path->parent->mkpath;
+			say "$target_path";
+			$source_path->copy( $target_path );
+		}
+		$progress->update(++$processed_files);
+	}
+
+	# post run
+	system( qw(glib-compile-schemas), path( $prefix, qw(mingw64 share glib-2.0 schemas) ) );
+}
+
+sub main {
+	my $command = shift @ARGV
+		or die "No command given: $0 [files|copy]\n";
+
+	if( $command eq 'files' ) {
+		build_msys2_file_list;
+	} elsif( $command eq 'copy' ) {
+		copy_files_to_prefix;
+	}
 }
 
 main;
