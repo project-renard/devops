@@ -84,11 +84,17 @@ sub copy_files_to_prefix {
 
 	my @all_file_list = @{ get_list_of_files(Load($yaml_data)) };
 
+	my $max = scalar @all_file_list;
+	my @term_set = exists $ENV{MSYSCON} || exists $ENV{APPVEYOR_BUILD_FOLDER}
+		? ( term => 1, term_width => 80 )
+		: ();
 	my $progress = Term::ProgressBar->new ({
 			name => "Copying package files",
+			@term_set,
 			ETA => 'linear',
-			count => scalar @all_file_list, });
+			count => $max, });
 	my $processed_files = 0;
+	my $next_update = 0;
 
 	chomp( my $msys2_base = `cygpath -w /` );
 	for my $file (@all_file_list) {
@@ -97,11 +103,14 @@ sub copy_files_to_prefix {
 
 		if( -f $source_path && ! -r $target_path ) {
 			$target_path->parent->mkpath;
-			say "$target_path";
+			#say "$target_path";
 			$source_path->copy( $target_path );
 		}
-		$progress->update(++$processed_files);
+		++$processed_files;
+		$next_update = $progress->update($processed_files)
+			if $processed_files >= $next_update;
 	}
+	$progress->update($max) if $max > $next_update;
 
 	# post run
 	system( qw(glib-compile-schemas), path( $prefix, qw(mingw64 share glib-2.0 schemas) ) );
