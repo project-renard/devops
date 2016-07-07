@@ -1,9 +1,10 @@
 require "etc"
 
 def debian_shell_provision( config )
-	config.vm.provision "shell", path: "./os-install-debian"
-	config.vm.provision :shell, privileged: false, path: "./perl-setup"
-	config.vm.provision :shell, privileged: false, path: "./cpan-setup"
+	prefix = '../script/from-vagrant'
+	config.vm.provision "shell", path: "#{prefix}/os-install-debian"
+	config.vm.provision :shell, privileged: false, path: "#{prefix}/perl-setup"
+	config.vm.provision :shell, privileged: false, path: "#{prefix}/cpan-setup"
 end
 
 def create_and_add_ssh_key()
@@ -36,7 +37,7 @@ privkey = create_and_add_ssh_key()
 def add_synced_folders( config, org_toplevel, options = {} )
 	for project_dir in %w[curie test-data devops] do
 		host_dir = File.absolute_path(File.join(org_toplevel, project_dir))
-		guest_dir = "~/project-renard/#{project_dir}"
+		guest_dir = "/home/vagrant/project-renard/#{project_dir}"
 		if options[:type] == 'sshfs'
 			config.vm.provision :shell, privileged: false, inline: <<SHELL
 if [ ! -d #{guest_dir} ]; then
@@ -80,7 +81,7 @@ Vagrant.configure(2) do |config|
 		osx.vm.box = "AndrewDryga/vagrant-box-osx"
 		#osx.vm.network :private_network, ip: "192.168.0.0"
 		osx.vm.network "public_network"
-		osx.vm.provision :shell, privileged: false, inline: File.readlines('os-install-osx-sshfs').join("")
+		osx.vm.provision :shell, privileged: false, inline: File.readlines('../script/from-vagrant/os-install-osx-sshfs').join("")
 		osx.vm.provision :shell, privileged: false, inline: <<SHELL
 echo '#{privkey}' > ~/.ssh/id_host
 chmod 600 ~/.ssh/id_host
