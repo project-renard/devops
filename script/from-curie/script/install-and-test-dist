@@ -8,6 +8,7 @@ if [ "$TRAVIS_OS_NAME" == "osx" ]; then
 
 	# Override the rest of the default Perl Travis-CI commands because we are done.
 	# Default for install: cpanm --quiet --installdeps --notest .
+	export ARCHFLAGS="-arch x86_64"
 	function cpanm {
 		eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib)
 		echo "Installing deps"
