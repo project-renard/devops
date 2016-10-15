@@ -37,8 +37,10 @@ privkey = create_and_add_ssh_key()
 def add_synced_folders( config, org_toplevel, options = {} )
 	for project_dir in %w[curie test-data devops] do
 		host_dir = File.absolute_path(File.join(org_toplevel, project_dir))
-		guest_dir = "/home/vagrant/project-renard/#{project_dir}"
+		guest_dir_rel = "project-renard/#{project_dir}"
 		if options[:type] == 'sshfs'
+			top = '~' # shell will expand this
+			guest_dir = "#{top}/#{guest_dir_rel}"
 			config.vm.provision :shell, privileged: false, inline: <<SHELL
 if [ ! -d #{guest_dir} ]; then
 	mkdir -p #{guest_dir};
@@ -46,6 +48,8 @@ if [ ! -d #{guest_dir} ]; then
 fi
 SHELL
 		else
+			top = '/home/vagrant'
+			guest_dir = "#{top}/#{guest_dir_rel}"
 			config.vm.synced_folder( host_dir, guest_dir )
 		end
 	end
