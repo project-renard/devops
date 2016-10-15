@@ -42,7 +42,7 @@ def add_synced_folders( config, org_toplevel, options = {} )
 			config.vm.provision :shell, privileged: false, inline: <<SHELL
 if [ ! -d #{guest_dir} ]; then
 	mkdir -p #{guest_dir};
-	sshfs #{Etc.getlogin}@192.168.0.1:#{host_dir} #{guest_dir};
+	sshfs #{Etc.getlogin}@10.0.2.2:#{host_dir} #{guest_dir};
 fi
 SHELL
 		else
@@ -86,7 +86,7 @@ Vagrant.configure(2) do |config|
 echo '#{privkey}' > ~/.ssh/id_host
 chmod 600 ~/.ssh/id_host
 # force adding to ~/.ssh/known_hosts so no verification needed
-ssh -o StrictHostKeyChecking=no #{Etc.getlogin}@192.168.0.1 -n true
+ssh -o StrictHostKeyChecking=no #{Etc.getlogin}@10.0.2.2 -n true
 SHELL
 		add_synced_folders( osx, org_toplevel, type: "sshfs" )
 	end
