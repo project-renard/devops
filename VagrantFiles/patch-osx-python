@@ -2,4 +2,4 @@
 
 CURDIR=`dirname "$0"`
 cd "$CURDIR"
-sudo patch /System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/distutils/sysconfig.py < osx-vagrantbox-python-sysconfig.patch
+sudo patch -N /System/Library/Frameworks/Python.framework/Versions/2.7/lib/python2.7/distutils/sysconfig.py < osx-vagrantbox-python-sysconfig.patch
