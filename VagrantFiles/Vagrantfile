@@ -93,5 +93,13 @@ chmod 600 ~/.ssh/id_host
 ssh -o StrictHostKeyChecking=no #{Etc.getlogin}@10.0.2.2 -n true
 SHELL
 		add_synced_folders( osx, org_toplevel, type: "sshfs" )
+		osx.vm.provision :shell, privileged: false, inline: <<SHELL
+if [ -d "$HOME/project-renard/devops/devops/VagrantFiles" ]; then
+	$HOME/project-renard/devops/devops/VagrantFiles/patch-osx-python
+else
+	$HOME/project-renard/devops/VagrantFiles/patch-osx-python
+fi
+SHELL
+
 	end
 end
