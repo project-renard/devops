@@ -5,6 +5,7 @@ main() {
 	_check_directory_with_all_repos;
 
 	export RENARD_TEST_DATA_PATH=$(_repo_dir "test-data")
+	export RENARD_SCRIPT_BASE=$(_repo_dir "devops")/script
 }
 
 _repo_dir () {

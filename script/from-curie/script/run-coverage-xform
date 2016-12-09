@@ -5,7 +5,7 @@ if [ "$TRAVIS_OS_NAME" == "linux" ]; then
 	if [ -n "$COVERAGE" ] && [ "$COVERAGE" != "0" ]; then
 		command cpanm -nq Moo List::AllUtils PPI IPC::Open2 Function::Parameters
 		echo "Applying PPI transformation"
-		sh $SCRIPT_BASE/from-curie/apply-ppi-xform-for-coverage
+		sh $RENARD_SCRIPT_BASE/from-curie/apply-ppi-xform-for-coverage
 	fi
 fi
 
