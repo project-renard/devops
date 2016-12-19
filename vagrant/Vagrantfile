@@ -58,7 +58,7 @@ SHELL
 	end
 end
 
-org_toplevel = "../.." # /path/to/VagrantFiles/../..
+org_toplevel = "../.." # /path/to/vagrant/../..
 if Dir.exists?("../../../devops")
 	org_toplevel = "../../.." # the project-renard directory
 end
@@ -112,10 +112,10 @@ ssh -o StrictHostKeyChecking=no #{Etc.getlogin}@10.0.2.2 -n true
 SHELL
 		add_synced_folders( osx, org_toplevel, type: "sshfs" )
 		osx.vm.provision :shell, privileged: false, inline: <<SHELL
-if [ -d "$HOME/project-renard/devops/devops/VagrantFiles" ]; then
-	$HOME/project-renard/devops/devops/VagrantFiles/patch-osx-python
+if [ -d "$HOME/project-renard/devops/devops/vagrant" ]; then
+	$HOME/project-renard/devops/devops/vagrant/patch-osx-python
 else
-	$HOME/project-renard/devops/VagrantFiles/patch-osx-python
+	$HOME/project-renard/devops/vagrant/patch-osx-python
 fi
 SHELL
 
