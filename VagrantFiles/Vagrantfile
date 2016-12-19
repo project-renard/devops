@@ -41,7 +41,9 @@ def add_synced_folders( config, org_toplevel, options = {} )
 		if options[:type] == 'sshfs'
 			top = '~' # shell will expand this
 			guest_dir = "#{top}/#{guest_dir_rel}"
-			config.vm.provision :shell, privileged: false, inline: <<SHELL
+			config.vm.provision :shell, privileged: false,
+				run: "always",
+				inline: <<SHELL
 # if directory does not exist or is empty
 if [ ! -d #{guest_dir} ] || [ ! "$(ls -A #{guest_dir})"  ] ; then
 	mkdir -p #{guest_dir};
