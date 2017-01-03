@@ -84,8 +84,25 @@ Vagrant.configure(2) do |config|
 		debian_shell_provision(precise)
 	end
 
-	config.vm.define :osx, autostart: false do |osx|
-		osx.vm.box = "AndrewDryga/vagrant-box-osx"
+	# To add the Sierra box, run
+	#
+	#     $ vagrant box add http://files.dryga.com/boxes/osx-sierra-0.3.1.box --name AndrewDryga/vagrant-box-osx-sierra
+	#
+	# See <https://atlas.hashicorp.com/AndrewDryga/boxes/vagrant-box-osx>
+	# for more information.
+{
+	'osx' => {
+			vnc_port: 5908,
+			box: 'AndrewDryga/vagrant-box-osx' },
+	'osx-yosemite' => {
+			vnc_port: 5909,
+			box: 'AndrewDryga/vagrant-box-osx' },
+	'osx-sierra'   => {
+			vnc_port: 5910,
+			box: 'AndrewDryga/vagrant-box-osx-sierra' },
+}.each	do |name, data|
+	config.vm.define name, autostart: false do |osx|
+		osx.vm.box = data[:box]
 		#osx.vm.network :private_network, ip: "192.168.0.0"
 		osx.vm.network "public_network"
 
@@ -96,7 +113,7 @@ Vagrant.configure(2) do |config|
 		# The VNC password is "vagrant".
 		#
 		# The password for the Vagrant user is "vagrant".
-		osx.vm.network "forwarded_port", guest: 5900, host: 5908
+		osx.vm.network "forwarded_port", guest: 5900, host: data[:vnc_port]
 		osx.vm.provision :shell, privileged: false, inline: <<SHELL
 # <https://serverfault.com/questions/120559/vnc-viewer-not-connecting-to-mac-from-windows>
 export VNC_PASSWD="vagrant";
@@ -120,4 +137,6 @@ fi
 SHELL
 
 	end
+end
+
 end
