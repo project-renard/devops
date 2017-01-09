@@ -91,14 +91,11 @@ Vagrant.configure(2) do |config|
 	# See <https://atlas.hashicorp.com/AndrewDryga/boxes/vagrant-box-osx>
 	# for more information.
 {
-	'osx' => {
+	'osx-yosemite' => {
 			vnc_port: 5908,
 			box: 'AndrewDryga/vagrant-box-osx' },
-	'osx-yosemite' => {
-			vnc_port: 5909,
-			box: 'AndrewDryga/vagrant-box-osx' },
 	'osx-sierra'   => {
-			vnc_port: 5910,
+			vnc_port: 5909,
 			box: 'AndrewDryga/vagrant-box-osx-sierra' },
 }.each	do |name, data|
 	config.vm.define name, autostart: false do |osx|
