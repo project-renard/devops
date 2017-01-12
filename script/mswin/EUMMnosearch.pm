@@ -37,4 +37,10 @@ if( $0 eq "Makefile.PL"  ) {
         exit 0;
 }
 
+## For Alien::gmake v0.15 : skip Alien::MSYS on MSYS2
+$INC{'Alien/MSYS.pm'} = __FILE__;
+package Alien::MSYS {
+	sub msys_path { '' }
+};
+
 1;
