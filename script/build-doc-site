@@ -1,0 +1,87 @@
+#!/usr/bin/env bash
+
+CURDIR=`dirname "$0"`
+
+setup() {
+	. $CURDIR/../ENV.sh
+	#for repo in $REPOS; do
+		#if [ ! -d external/project-renard/$repo ]; then
+			#git clone https://github.com/project-renard/$repo.git external/project-renard/$repo || return $?
+		#fi
+	#done
+	#. external/project-renard/devops/ENV.sh
+}
+
+_build_repo_docs() {
+	REPO_NAME="$1"
+	REPO_DOC_BUILD_DIR=$DOC_BUILD_DIR/$REPO_NAME
+	if [ ! -d $REPO_DOC_BUILD_DIR ]; then
+		mkdir -p $REPO_DOC_BUILD_DIR;
+		(
+			cd $(_repo_dir "$REPO_NAME");
+			if [ -f "dist.ini" ]; then
+				# if we can build using dzil
+				dzil authordeps | cpanm
+				dzil build --in $REPO_DOC_BUILD_DIR
+			fi
+		)
+	fi
+}
+
+_build_repos() {
+	for repo in $REPOS; do
+		_build_repo_docs $repo
+	done
+}
+
+
+build_html() {
+	mkdir -p $DOC_HTML_DIR
+
+	cpanm Pod::Site
+	podsite \
+		--doc-root $DOC_HTML_DIR \
+		--base-uri '/~zaki/doc' \
+		--name 'Project Renard' \
+		$DOC_BUILD_DIR/*/{lib,bin}
+
+	#cpanm Pod::Simple::HTMLBatch
+	#perl -MPod::Simple::HTMLBatch -e 'Pod::Simple::HTMLBatch::go' $DOC_BUILD_DIR/*/lib $DOC_HTML_DIR
+
+	perl -pi -E '
+		s,\Qhttp://search.cpan.org/perldoc?\E,https://metacpan.org/pod/,g;
+		s,\Qhttps://metacpan.org/pod/Gtk3::\E([^"]+),"https://developer.gnome.org/gtk3/stable/Gtk". ($1 =~ s|::||gr).".html" ,ge;
+	' $(find $DOC_HTML_DIR -type f -name "*.html")
+
+	perl -pi -E 's,\Q</a>—\E,</a>&nbsp;— ,g' $DOC_HTML_DIR/toc.html
+	perl -pi -E '
+		# CSS: #doc h1
+		s/\Qborder-bottom: 1px solid #808080;\E//g;
+		# CSS: #doc h2
+		s/\Qborder-bottom: 1px dashed #808080\E//g;
+	' $DOC_HTML_DIR/podsite.css
+
+	#mv $DOC_HTML_DIR/toc.html $DOC_HTML_DIR/index.html
+
+	cp -puvR $DOC_HTML_DIR/* $TARGET_DIR/
+}
+
+main() {
+	REPOS="devops curie"
+
+	TARGET_DIR="$1"
+	if [ ! -d "$TARGET_DIR" ]; then
+		echo "No output directory: $TARGET_DIR"
+		exit 1;
+	fi
+	BUILD_DIR="$PWD/external/_build"
+	DOC_BUILD_DIR="$BUILD_DIR/build-doc"
+	DOC_HTML_DIR="$BUILD_DIR/html-doc"
+
+	setup;
+	_build_repos;
+	build_html;
+}
+
+main "$@";
+
