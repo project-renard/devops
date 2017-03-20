@@ -6,7 +6,7 @@ if [ "$TRAVIS_OS_NAME" == "osx" ]; then
 	brew install Caskroom/cask/xquartz || return $?
 	( sed 's/#.*//' < homebrew-packages | xargs brew install ) || return $?
 
-	export PKG_CONFIG_PATH=/usr/local/Cellar/libffi/3.0.13/lib/pkgconfig
+	export PKG_CONFIG_PATH=/usr/local/opt/libffi/lib/pkgconfig:$PKG_CONFIG_PATH
 elif [ "$TRAVIS_OS_NAME" == "linux" ]; then
 	# We do not need to install in this script on Travis-CI Linux. The
 	# packages are listed in .travis.yml
