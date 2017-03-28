@@ -6,7 +6,7 @@ extends 'PPI::Transform';
 use List::AllUtils qw(any);
 #use Carp::Always;
 use PPI::Dumper;
-use constant SUBNAMES => qw(fun method classmethod);
+use constant SUBNAMES => qw(fun method classmethod callback);
 %PPI::Lexer::STATEMENT_CLASSES = (
 	%PPI::Lexer::STATEMENT_CLASSES,
 	( map { ( $_ => 'PPI::Statement::Sub' ) } SUBNAMES ),
@@ -19,6 +19,7 @@ use Function::Parameters {
 	fun         => { defaults => 'function_lax'   , },
 	classmethod => { defaults => 'classmethod_lax', },
 	method      => { defaults => 'method_lax'     , },
+	callback    => { defaults => 'function_lax'   , check_argument_count => 0 },
 };
 
 <REPLACE> {
