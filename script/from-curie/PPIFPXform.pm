@@ -219,6 +219,7 @@ sub find_statement_and_anonymous_subs {
 		my $right_before = $current_child->previous_sibling;
 		my $reached_block = 0;
 		do {
+			next unless ref $current_child;
 			$reached_block = 1 if $current_child->isa('PPI::Structure::Block');
 			push @part_of_sub, $current_child;
 			$current_child = $current_child->next_sibling;
