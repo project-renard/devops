@@ -1,0 +1,15 @@
+#!/bin/bash
+
+if [ "$TRAVIS_OS_NAME" == "linux" ]; then
+	# NOTE: we only run coverage on Linux.
+	if [ -n "$COVERAGE" ] && [ "$COVERAGE" != "0" ]; then
+		echo "Make B::Deparse use Data::Dumper";
+		FULL_RENARD_SCRIPT_BASE=$(cd $RENARD_SCRIPT_BASE && pwd);
+		export PERL5LIB="${PERL5LIB}${PERL5LIB:+:}""$FULL_RENARD_SCRIPT_BASE/general";
+		export HARNESS_PERL_SWITCHES="${HARNESS_PERL_SWITCHES}${HARNESS_PERL_SWITCHES:+ }""-MDeparseDumper";
+		echo PERL5LIB="$PERL5LIB";
+		echo HARNESS_PERL_SWITCHES="$HARNESS_PERL_SWITCHES";
+	fi
+fi
+
+true

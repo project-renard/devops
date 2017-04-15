@@ -8,4 +8,4 @@ export RENARD_SCRIPT_BASE="$CURDIR"
 . $RENARD_SCRIPT_BASE/from-curie/script/start-xvfb
 . $RENARD_SCRIPT_BASE/from-curie/script/get-aux-repo
 . $RENARD_SCRIPT_BASE/from-curie/script/install-and-test-dist
-. $RENARD_SCRIPT_BASE/from-curie/script/run-coverage-xform
+. $RENARD_SCRIPT_BASE/general/run-coverage-deparse
