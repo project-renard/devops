@@ -2,7 +2,7 @@
 
 brew update
 brew install Caskroom/cask/osxfuse
-brew install homebrew/fuse/sshfs
+brew install sshfs
 
 mkdir -p ~/.ssh/socket
 echo "Host *
