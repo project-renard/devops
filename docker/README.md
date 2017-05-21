@@ -32,7 +32,7 @@
 6. Run the machine
 
     ```shell
-    docker run -i -t debian # docker run -i -t <debian>
+    docker run -i -t debian # docker run -i -t <friendly name>
     ```
 7. Having amde all your changes, you can now `exit`
 
@@ -47,7 +47,7 @@
 # [Custom docker](https://www.youtube.com/watch?v=hnxI-K10auY)
 
 ```shell
-docker build docker-repository/ # docker build <docker repository directory>
+docker build -t curie-test docker-repository/ # docker build -t <friendly name> <docker repository directory>
 docker run --name curie-test    # docker run --name curie-test <idproduced by docker build>
 docker rm curie-test # cleanup 
 ```
