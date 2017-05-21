@@ -26,3 +26,6 @@ docker-machine env --shell=powershell | Invoke-Expression
 ```shell
 docker pull debian
 ```
+
+# Relevant docs
+[Moving, saving, registering a docker](https://blog.giantswarm.io/moving-docker-container-images-around/)
