@@ -68,6 +68,13 @@ docker stop 87ae864730
 
 # Share the [image](https://docs.docker.com/get-started/part2/#share-your-image)
 
+```shell
+docker build -t curie . # from the directory where the Dockerfile is
+docker tag curie projectrenard/curie:latest
+docker push  projectrenard/curie:latest
+```
+
+
 # Relevant docs
 [Moving, saving, registering a docker](https://blog.giantswarm.io/moving-docker-container-images-around/)
 
