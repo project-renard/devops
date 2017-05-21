@@ -65,3 +65,7 @@ docker exec -it 87ae864730 bash -c 'ls /' # docker exec -it <runing docker uniqu
 # Stop the docker execution
 docker stop 87ae864730
 ```
+
+
+# Share the [image](https://docs.docker.com/get-started/part2/#share-your-image)
+
