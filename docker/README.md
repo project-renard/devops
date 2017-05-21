@@ -36,19 +36,21 @@
     ```
 7. Having amde all your changes, you can now `exit`
 
-```shell
-docker ps -a 
-docker diff 516c25bb3b8c # docker diff <the id of the machine eddited>
-docker commit 516c25bb3b8c debian:thechange # docker commit <the id of the machine eddited> <repository>:<name-of-change> #
+    ```shell
+    docker ps -a 
+    docker diff 516c25bb3b8c # docker diff <the id of the machine eddited>
+    docker commit 516c25bb3b8c debian:thechange # docker commit <the id of the machine eddited> <repository>:<name-of-change> #
 
-docker images # you can see the changes
-```
+    docker images # you can see the changes
+    ```
 
 # [Custom docker](https://www.youtube.com/watch?v=hnxI-K10auY)
 
+```shell
 docker build docker-repository/ # docker build <docker repository directory>
 docker run --name curie-test    # docker run --name curie-test <idproduced by docker build>
 docker rm curie-test # cleanup 
+```
 
 # Sending commands to a runnig docker image
 
