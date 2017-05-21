@@ -48,7 +48,8 @@
 
 ```shell
 docker build -t curie-test docker-repository/ # docker build -t <friendly name> <docker repository directory>
-docker run --name curie-test    # docker run --name curie-test <idproduced by docker build>
+# docker run --name curie-test  <docker-id>  # docker run --name curie-test <idproduced by docker build>
+docker run curie-test # docker run <friendly name> 
 docker rm curie-test # cleanup 
 ```
 
