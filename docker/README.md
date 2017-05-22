@@ -19,9 +19,9 @@
 4. You can either install them manually or run one of the following depending on your shell environment (cmd, bash, power-shell)
 
     ```shell
-    docker-machine env --shell=cmd # you need to run it manually
-    docker-machine env --shell=bash > env-var-commands-tmp && . env-var-commands-tmp && rm env-var-commands-tmp
-    docker-machine env --shell=powershell | Invoke-Expression
+    @FOR /f "tokens=*" %i IN ('docker-machine env --shell=cmd') DO @%i # CMD
+    eval "$(docker-machine env --shell=bash)" # shell
+    docker-machine env --shell=powershell | Invoke-Expression # powershell
     ```
 
 5. Pull the docker image you would like to work with
@@ -73,6 +73,19 @@ docker build -t curie . # from the directory where the Dockerfile is
 docker tag curie projectrenard/curie:latest
 docker push  projectrenard/curie:latest
 ```
+
+# Graphical access to Docker
+
+* You need to configure xming, it needs to run  without access control [not good] , so on linu you would have todo `xming -ac` and on windows you would need to run Xlaunch and dissable from there the Access Control. Then you can launch docker (*remember to configure DISPLAY ot point to the local ip*). Then you run : 
+
+```shell
+docker run -ti -e DISPLAY="192.168.33.1:0.0"  projectrenard/curie bash -c "perl ~/project-renard/curie/bin/curie"
+```
+
+* In order to use VNC with Docker, we need apt-get install vnc4server, Xvnc <display-id> and do a port mapping to the VNC port. # TODO imroove this.
+
+
+
 
 
 # Relevant docs
