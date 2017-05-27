@@ -17,6 +17,8 @@ package Renard::Devops::Conditional {
 	sub is_under_travis_ci_osx { $ENV{TRAVIS_OS_NAME} eq 'osx' }
 	sub is_under_travis_ci_linux { $ENV{TRAVIS_OS_NAME} eq 'linux' }
 	sub is_under_appveyor_ci { exists $ENV{APPVEYOR_BUILD_FOLDER} && $ENV{APPVEYOR_BUILD_FOLDER} }
+	sub is_under_vagrant { exists $ENV{UNDER_VAGRANT} && $ENV{UNDER_VAGRANT} }
+	sub is_under_debian { -f '/etc/debian_version' }
 }
 
 our $shell_script_commands = '';
@@ -28,48 +30,64 @@ sub add_to_shell_script {
 }
 
 sub main {
-	unless( exists $ENV{DEVOPS_BRANCH} && $ENV{DEVOPS_BRANCH} ) {
-		$ENV{DEVOPS_BRANCH} = 'master';
-	}
-	unless( -d $devops_dir ) {
-		say STDERR "Cloning from devops [branch: $ENV{DEVOPS_BRANCH}]";
-		system(
-			qw(git clone),
-			qw(-b), $ENV{DEVOPS_BRANCH},
-			qw(https://github.com/project-renard/devops.git), $devops_dir,
-		) == 0 or die "Could not clone devops directory: $!";
-	}
-
+	my $mode;
 	my $system;
-	if( Renard::Devops::Conditional::is_under_travis_ci() ) {
-		if ( Renard::Devops::Conditional::is_under_travis_ci_osx() ) {
-			say STDERR "Running under Travis CI osx";
-			$system = 'Renard::Devops::Env::MacOS::Homebrew';
-		} elsif( Renard::Devops::Conditional::is_under_travis_ci_linux() ) {
-			say STDERR "Running under Travis CI linux";
-			$system = 'Renard::Devops::Env::Linux::Debian';
-		}
 
-		stage_before_install($system);
-		stage_install($system);
-	} elsif( Renard::Devops::Conditional::is_under_appveyor_ci() ) {
-		$system = 'Renard::Devops::Env::MSWin::MSYS2';
-		if( $ARGV[0] eq 'install' ) {
-			say STDERR "Running under Appveyor install";
+	if( @ARGV == 0 || $ARGV[0] eq 'install' || $ARGV[0] eq 'test' ) {
+		$mode = 'auto';
+	} elsif( $ARGV[0] eq 'vagrant' ) {
+		$mode = 'vagrant';
+	} else {
+		die "Unknown mode";
+	}
+
+	if( $mode eq 'auto' ) {
+		unless( exists $ENV{DEVOPS_BRANCH} && $ENV{DEVOPS_BRANCH} ) {
+			$ENV{DEVOPS_BRANCH} = 'master';
+		}
+		unless( -d $devops_dir ) {
+			say STDERR "Cloning from devops [branch: $ENV{DEVOPS_BRANCH}]";
+			system(
+				qw(git clone),
+				qw(-b), $ENV{DEVOPS_BRANCH},
+				qw(https://github.com/project-renard/devops.git), $devops_dir,
+			) == 0 or die "Could not clone devops directory: $!";
+		}
+		if( Renard::Devops::Conditional::is_under_travis_ci() ) {
+			if ( Renard::Devops::Conditional::is_under_travis_ci_osx() ) {
+				say STDERR "Running under Travis CI osx";
+				$system = 'Renard::Devops::Env::MacOS::Homebrew';
+			} elsif( Renard::Devops::Conditional::is_under_travis_ci_linux() ) {
+				say STDERR "Running under Travis CI linux";
+				$system = 'Renard::Devops::Env::Linux::Debian';
+			}
 
 			stage_before_install($system);
 			stage_install($system);
+		} elsif( Renard::Devops::Conditional::is_under_appveyor_ci() ) {
+			$system = 'Renard::Devops::Env::MSWin::MSYS2';
+			if( $ARGV[0] eq 'install' ) {
+				say STDERR "Running under Appveyor install";
 
-		} elsif( $ARGV[0] eq 'test' ) {
-			say STDERR "Running under Appveyor test";
+				stage_before_install($system);
+				stage_install($system);
 
-			stage_test($system);
+			} elsif( $ARGV[0] eq 'test' ) {
+				say STDERR "Running under Appveyor test";
+
+				stage_test($system);
+			}
 		}
+
+		say STDERR "Shell commands:\n===========\n$shell_script_commands\n===========";
+
+		say "#START\n".$shell_script_commands."\n#END";
+	} elsif( $mode eq 'vagrant' ) {
+		$ENV{UNDER_VAGRANT} = 1;
+		$system = 'Renard::Devops::Env::Vagrant';
+
+		$system->run;
 	}
-
-	say STDERR "Shell commands:\n===========\n$shell_script_commands\n===========";
-
-	say "#START\n".$shell_script_commands."\n#END";
 }
 
 sub stage_before_install {
@@ -114,6 +132,71 @@ main;
 
 
 #####
+
+package Renard::Devops::Env::Vagrant {
+	sub pipe_to_bash {
+		my ($cmd) = @_;
+		open( my $fh, '|bash');
+		$fh->autoflush(1);
+		say $fh "$cmd";
+	}
+
+	sub run {
+		my ($system) = @_;
+		$system->pre_native;
+		$system->pre_perl;
+		#$system->repo_install_native;
+		$system->repo_install_perl;
+	}
+
+	sub pre_native {
+		pipe_to_bash( <<'END' );
+sudo apt-get -y update
+sudo apt-get -y upgrade
+sudo apt-get -y install build-essential vim curl wget libgirepository1.0-dev libgdl-3-5 gobject-introspection libgtk-3-dev
+sudo apt-get -y install gir1.2-gdl-3 libpoppler-glib-dev poppler-utils mupdf-tools git libglib-object-introspection-perl
+sudo apt-get -y install --no-install-recommends glade
+sudo apt-get -y install libssl-dev
+
+echo "Adding the ENV settings"
+cat <<'EOF' >> $HOME/.bashrc.project-renard
+for ENV_PATH in ~/project-renard/devops/ENV.sh ~/project-renard/devops/devops/ENV.sh; do
+	if [ -f $ENV_PATH ]; then
+		. $ENV_PATH
+	fi
+done
+EOF
+echo "source ~/.bashrc.project-renard" >> $HOME/.bashrc
+
+END
+	}
+
+	sub pre_perl {
+		pipe_to_bash( <<'END' );
+curl -L http://install.perlbrew.pl | bash
+echo "source ~/perl5/perlbrew/etc/bashrc" >> ~/.bashrc
+source ~/perl5/perlbrew/etc/bashrc
+perlbrew install perl-5.20.3
+perlbrew install-cpanm
+perlbrew switch perl-5.20.3
+END
+	}
+
+	sub repo_install_perl {
+		pipe_to_bash( <<'END' );
+source ~/perl5/perlbrew/etc/bashrc
+source ~/.bashrc.project-renard
+
+cd $(_repo_dir curie)
+
+# do not run tests because these may fail when not in interactive shell
+cpanm --notest Term::ReadKey
+
+cpanm --installdeps .
+cpanm Dist::Zilla
+END
+	}
+}
 
 
 package Renard::Devops::Env::MacOS::Homebrew {
