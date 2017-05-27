@@ -8,11 +8,11 @@ sudo apt-get -y install --no-install-recommends glade
 sudo apt-get -y install libssl-dev
 
 echo "Adding the ENV settings"
-cat <<'EOF' >> ~vagrant/.bashrc.project-renard
+cat <<'EOF' >> $HOME/.bashrc.project-renard
 for ENV_PATH in ~/project-renard/devops/ENV.sh ~/project-renard/devops/devops/ENV.sh; do
 	if [ -f $ENV_PATH ]; then
 		. $ENV_PATH
 	fi
 done
 EOF
-echo "source ~/.bashrc.project-renard" >> ~vagrant/.bashrc
+echo "source ~/.bashrc.project-renard" >> $HOME/.bashrc
