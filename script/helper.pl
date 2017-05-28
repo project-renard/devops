@@ -244,12 +244,9 @@ EOF
 		export ARCHFLAGS="-arch x86_64";
 		function cpanm {
 			eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib);
-			echo "Installing Moose (required for Function::Parameters)";
-			command cpanm -n Moose --verbose;
+			command cpanm -n Function::Parameters;
 			echo "Installing deps";
 			command cpanm --notest --installdeps .;
-			echo "Installing Alien::MuPDF";
-			command cpanm -n Alien::MuPDF --verbose;
 		};
 
 		function make {
