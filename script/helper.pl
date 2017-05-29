@@ -232,7 +232,7 @@ EOF
 
 	sub repo_install_native {
 		main::add_to_shell_script( <<'EOF' );
-		( sed 's/#.*//' < homebrew-packages | xargs brew install );
+		( sed 's/#.*//' < maint/homebrew-packages | xargs brew install );
 EOF
 	}
 
@@ -376,7 +376,7 @@ EOF
 	sub repo_install_native {
 		# Native deps
 		run_under_mingw( <<'EOF' );
-			xargs pacman -S --needed --noconfirm < $APPVEYOR_BUILD_FOLDER/msys2-mingw64-packages
+			xargs pacman -S --needed --noconfirm < $APPVEYOR_BUILD_FOLDER/maint/msys2-mingw64-packages
 EOF
 	}
 
