@@ -33,6 +33,9 @@ sub main {
 	my $mode;
 	my $system;
 
+	my $current_repo = Renard::Devops::Repo->new(
+		path => File::Spec->rel2abs('.') );
+
 	if( @ARGV == 0 || $ARGV[0] eq 'install' || $ARGV[0] eq 'test' ) {
 		$mode = 'auto';
 	} elsif( $ARGV[0] eq 'vagrant' ) {
@@ -62,20 +65,20 @@ sub main {
 				$system = 'Renard::Devops::Env::Linux::Debian';
 			}
 
-			stage_before_install($system);
-			stage_install($system);
+			stage_before_install($system, $current_repo);
+			stage_install($system, $current_repo);
 		} elsif( Renard::Devops::Conditional::is_under_appveyor_ci() ) {
 			$system = 'Renard::Devops::Env::MSWin::MSYS2';
 			if( $ARGV[0] eq 'install' ) {
 				say STDERR "Running under Appveyor install";
 
-				stage_before_install($system);
-				stage_install($system);
+				stage_before_install($system, $current_repo);
+				stage_install($system, $current_repo);
 
 			} elsif( $ARGV[0] eq 'test' ) {
 				say STDERR "Running under Appveyor test";
 
-				stage_test($system);
+				stage_test($system, $current_repo);
 			}
 		}
 
@@ -91,9 +94,9 @@ sub main {
 }
 
 sub stage_before_install {
-	my ($system) = @_;
+	my ($system, $current_repo) = @_;
 
-	get_aux_repo();
+	get_aux_repo($current_repo);
 	main::add_to_shell_script( <<'EOF' );
 		export RENARD_TEST_DATA_PATH="external/project-renard/test-data";
 		export RENARD_SCRIPT_BASE="external/project-renard/devops/script";
@@ -104,19 +107,21 @@ EOF
 }
 
 sub stage_install {
-	my ($system) = @_;
+	my ($system, $current_repo) = @_;
 
-	$system->repo_install_native;
-	$system->repo_install_perl;
+	$system->repo_install_native($current_repo);
+	$system->repo_install_perl($current_repo);
 }
 
 sub stage_test {
-	my ($system) = @_;
+	my ($system, $current_repo) = @_;
 
-	$system->repo_test;
+	$system->repo_test($current_repo);
 }
 
 sub get_aux_repo {
+	my ($current_repo) = @_;
+
 	for my $repo (qw(devops test-data)) {
 		unless( -d "external/project-renard/$repo" ) {
 			say STDERR "Cloning $repo";
@@ -231,12 +236,17 @@ EOF
 	}
 
 	sub repo_install_native {
-		main::add_to_shell_script( <<'EOF' );
-		( sed 's/#.*//' < maint/homebrew-packages | xargs brew install );
+		my ($system, $repo) = @_;
+
+		my $deps = $repo->homebrew_packages_path;
+		main::add_to_shell_script( <<"EOF" );
+		( sed 's/#.*//' < $deps | xargs brew install );
 EOF
 	}
 
 	sub repo_install_perl {
+		my ($system, $repo) = @_;
+
 		# Override the rest of the default Perl Travis-CI commands because we are done.
 		# Default for install: cpanm --quiet --installdeps --notest .
 		# Default for script: make test (no M::B or EUMM)
@@ -259,6 +269,8 @@ EOF
 	}
 
 	sub repo_test {
+		my ($system, $repo) = @_;
+
 		if( Renard::Devops::Conditional::is_under_travis_ci_osx() ) {
 			# automatic `make test`
 			return;
@@ -287,6 +299,8 @@ EOF
 	}
 
 	sub repo_install_native {
+		my ($system, $repo) = @_;
+
 		if( Renard::Devops::Conditional::is_under_travis_ci_linux() ) {
 			# Repo native dependencies will be installed by Travis CI
 			return;
@@ -294,6 +308,8 @@ EOF
 	}
 
 	sub repo_install_perl {
+		my ($system, $repo) = @_;
+
 		# NOTE: we only run coverage on Linux.
 		main::add_to_shell_script( <<'EOF' );
 		cpanm --local-lib=~/perl5 local::lib && eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib);
@@ -311,6 +327,8 @@ EOF
 	}
 
 	sub repo_test {
+		my ($system, $repo) = @_;
+
 		if( Renard::Devops::Conditional::is_under_travis_ci_linux() ) {
 			# automatic `make test`
 			return;
@@ -374,13 +392,23 @@ EOF
 	}
 
 	sub repo_install_native {
+		my ($system, $repo) = @_;
+
 		# Native deps
-		run_under_mingw( <<'EOF' );
-			xargs pacman -S --needed --noconfirm < $APPVEYOR_BUILD_FOLDER/maint/msys2-mingw64-packages
+		my $deps = $repo->msys2_mingw64_packages_path;
+
+		# Under `bash`, we need to use forward slashes so that we do not
+		# need to escape the string.
+		$deps =~ s,\\,/,g;
+
+		run_under_mingw( <<"EOF" );
+			xargs pacman -S --needed --noconfirm < $deps;
 EOF
 	}
 
 	sub repo_install_perl {
+		my ($system, $repo) = @_;
+
 		run_under_mingw( <<EOF );
 			. $devops_dir/script/mswin/EUMMnosearch.sh
 			export MAKEFLAGS='-j4 -P4'
@@ -391,6 +419,8 @@ EOF
 	}
 
 	sub repo_test {
+		my ($system, $repo) = @_;
+
 		my $ret = run_under_mingw( <<'EOF' );
 			cd $APPVEYOR_BUILD_FOLDER;
 
@@ -403,5 +433,44 @@ EOF
 }
 
 package Renard::Devops::Repo {
+	sub new {
+		my ($class, %opt) = @_;
 
+		my $data = {};
+
+		$data->{_path} = $opt{path} if exists $opt{path};
+
+		die "Path $data->{_path} is not readable directory"
+			unless -d $data->{_path} and -r $data->{_path};
+
+		return bless $data, $class;
+	}
+	sub path { $_[0]->{_path} }
+
+	sub cpanfile_git_data {
+		my ($self) = @_;
+
+		require Module::CPANfile;
+		my $data = {};
+		my $cpanfile_git_path = File::Spec->catfile($self->path, qw(maint cpanfile-git));
+		if ( -f $cpanfile_git_path  ) {
+			my $m = Module::CPANfile->load($cpanfile_git_path);
+			$data = +{ map { $_->requirement->name => $_->requirement->options }
+				@{ $m->{_prereqs}->{prereqs} } }
+		}
+
+		return $data;
+	}
+
+	sub debian_packages_path {
+		File::Spec->catfile( $_[0]->path, qw(maint debian-packages) );
+	}
+
+	sub homebrew_packages_path {
+		File::Spec->catfile( $_[0]->path, qw(maint homebrew-packages));
+	}
+
+	sub msys2_mingw64_packages_path {
+		File::Spec->catfile( $_[0]->path, qw(maint msys2-mingw64-packages));
+	}
 };
