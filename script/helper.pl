@@ -250,19 +250,26 @@ EOF
 		# Override the rest of the default Perl Travis-CI commands because we are done.
 		# Default for install: cpanm --quiet --installdeps --notest .
 		# Default for script: make test (no M::B or EUMM)
-		main::add_to_shell_script( <<'EOF' );
-		export ARCHFLAGS="-arch x86_64";
+		my $dist_ini = File::Spec->catfile($repo->path, 'dist.ini');
+		main::add_to_shell_script( <<EOF );
+		export ARCHFLAGS='-arch x86_64';
 		function cpanm {
-			eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib);
-			command cpanm -n Function::Parameters;
-			echo "Installing deps";
-			command cpanm --notest --installdeps .;
+			eval \$(perl -I ~/perl5/lib/perl5/ -Mlocal::lib);
+			if [ -r $dist_ini ]; then
+				cpanm -n Dist::Zilla;
+				dzil authordeps | cpanm -n;
+				dzil listdeps | grep -v '^Possibly harmless' | cpanm -n;
+			else
+				echo 'Installing deps';
+				command cpanm -n Function::Parameters;
+				command cpanm --notest --installdeps .;
+			fi;
 		};
 
 		function make {
 			export TEST_JOBS=4;
-			if [ "$#" == 1 ] && [ "$1" == "test" ]; then
-				prove -j${TEST_JOBS} -lvr t;
+			if [ "\$#" == 1 ] && [ "\$1" == "test" ]; then
+				prove -j\${TEST_JOBS} -lvr t;
 			fi;
 		};
 EOF
@@ -339,7 +346,8 @@ EOF
 package Renard::Devops::Env::MSWin::MSYS2 {
 	sub run_under_mingw {
 		my ($cmd) = @_;
-		local $ENV{PATH} = "C:\\$ENV{MSYS2_DIR}\\$ENV{MSYSTEM}\\bin;C:\\$ENV{MSYS2_DIR}\\usr\\bin;$ENV{PATH}";
+		my $msystem_lc = lc $ENV{MSYSTEM};
+		local $ENV{PATH} = "C:\\$ENV{MSYS2_DIR}\\$msystem_lc\\bin;C:\\$ENV{MSYS2_DIR}\\usr\\bin;$ENV{PATH}";
 		return system( qw(bash -c), $cmd);
 	}
 
@@ -385,6 +393,7 @@ EOF
 	sub pre_perl {
 		run_under_mingw( <<EOF );
 			pacman -S --needed --noconfirm mingw-w64-x86_64-perl;
+			perl -V;
 			pl2bat `which pl2bat`;
 			yes | cpan App::cpanminus;
 			cpanm --notest ExtUtils::MakeMaker Module::Build;
@@ -395,11 +404,8 @@ EOF
 		my ($system, $repo) = @_;
 
 		# Native deps
-		my $deps = $repo->msys2_mingw64_packages_path;
-
-		# Under `bash`, we need to use forward slashes so that we do not
-		# need to escape the string.
-		$deps =~ s,\\,/,g;
+		my $deps_orig = $repo->msys2_mingw64_packages_path;
+		chomp(my $deps = `cygpath -u $deps_orig`);
 
 		run_under_mingw( <<"EOF" );
 			xargs pacman -S --needed --noconfirm < $deps;
@@ -409,24 +415,74 @@ EOF
 	sub repo_install_perl {
 		my ($system, $repo) = @_;
 
+		my $dist_ini_orig = File::Spec->catfile($repo->path, 'dist.ini');
+		my $repo_path_orig = $repo->path;
+		chomp(my $repo_path = `cygpath -u $repo_path_orig`);
+		chomp(my $dist_ini = `cygpath -u $dist_ini_orig`);
+		my $filter_grep = ''
+			. q| -e '^Possibly harmless'|
+			. q| -e '^Attempt to reload.*aborted'|
+			. q| -e 'BEGIN failed--compilation aborted'|
+			. q| -e '^Can.*t locate.*in \@INC'|
+			. q| -e '^Compilation failed in require'|;
 		run_under_mingw( <<EOF );
-			. $devops_dir/script/mswin/EUMMnosearch.sh
-			export MAKEFLAGS='-j4 -P4'
+			cd $repo_path;
 
-			# Install via cpanfile
-			cpanm --notest --installdeps .
+			. \$APPVEYOR_BUILD_FOLDER/$devops_dir/script/mswin/EUMMnosearch.sh;
+			export MAKEFLAGS='-j4 -P4';
+
+			if [ -r $dist_ini ]; then
+				cpanm -n Term::ReadKey --build-args=RM=echo;
+				cpanm Win32::Process
+
+				n=0;
+				until [ \$n -ge 3 ]; do
+					cpanm -f -n Dist::Zilla && break;
+					n=\$[n+1];
+				done
+
+				export DZIL=\$(which dzil);
+				sed -i 's,/usr/bin/perl,'\$(which perl), \$DZIL
+
+				n=0;
+				until [ \$n -ge 3 ]; do
+					perl \$DZIL authordeps | xargs cpanm -f -n && break;
+					echo '=== authordeps missing ==='
+					perl \$DZIL authordeps --missing
+					echo '=========================='
+					n=\$[n+1];
+				done
+
+				n=0;
+				until [ \$n -ge 3 ]; do
+					perl \$DZIL listdeps | grep -v $filter_grep
+					perl \$DZIL listdeps | grep -v $filter_grep | cpanm -n && break;
+					n=\$[n+1];
+				done
+			else
+				# Install via cpanfile
+
+				n=0;
+				until [ \$n -ge 3 ]; do
+					cpanm --notest --installdeps .
+					n=\$[n+1];
+				done
+			fi;
 EOF
 	}
 
 	sub repo_test {
 		my ($system, $repo) = @_;
 
-		my $ret = run_under_mingw( <<'EOF' );
-			cd $APPVEYOR_BUILD_FOLDER;
+		my $repo_path_orig = $repo->path;
+		chomp(my $repo_path = `cygpath -u $repo_path_orig`);
+		my $ret = run_under_mingw( <<EOF );
+			cd $repo_path;
+			#eval \$(perl -I ~/perl5/lib/perl5/ -Mlocal::lib);
 
 			export TEST_JOBS=4;
 			. external/project-renard/devops/ENV.sh;
-			prove -j${TEST_JOBS} -lvr t;
+			prove -j\${TEST_JOBS} -lvr t;
 EOF
 		exit 1 if $ret != 0;
 	}
@@ -439,6 +495,7 @@ package Renard::Devops::Repo {
 		my $data = {};
 
 		$data->{_path} = $opt{path} if exists $opt{path};
+		# TODO need to indicate if this is the main repo
 
 		die "Path $data->{_path} is not readable directory"
 			unless -d $data->{_path} and -r $data->{_path};
