@@ -18,7 +18,10 @@ if( $0 eq "Makefile.PL"  ) {
 			# for entire mingw64 system. This way XS modules
 			# that depend on other XS modules can compile
 			# statically using .a files.
-			$args{LIBS} =~ s,^(.*?)(\Q-LC:/msys64/mingw64/lib\E\s),$1 :nosearch $2,;
+			#
+			# The pattern needs to be case-insensitive because
+			# Windows is case-insensitive.
+			$args{LIBS} =~ s,^(.*?)(\Q-LC:/msys64/mingw64/lib\E\s),$1 :nosearch $2,i;
 
 			# Special case for expat (XML::Parser::Expat) because
 			# it does not use either of
@@ -36,11 +39,5 @@ if( $0 eq "Makefile.PL"  ) {
         # we can exit now that we are done
         exit 0;
 }
-
-## For Alien::gmake v0.15 : skip Alien::MSYS on MSYS2
-$INC{'Alien/MSYS.pm'} = __FILE__;
-package Alien::MSYS {
-	sub msys_path { '' }
-};
 
 1;
