@@ -24,67 +24,72 @@ package Renard::Devops::Conditional {
 our $shell_script_commands = '';
 our $devops_dir = 'external/project-renard/devops';
 
+our $filter_grep = ''
+	. q| -e '^Possibly harmless'|
+	. q| -e '^Attempt to reload.*aborted'|
+	. q| -e 'BEGIN failed--compilation aborted'|
+	. q| -e '^Can.*t locate.*in \@INC'|
+	. q| -e '^Compilation failed in require'|;
+
 sub add_to_shell_script {
 	my ($cmd) = @_;
 	$shell_script_commands .= "$cmd\n";
 }
 
-sub main {
-	my $mode;
+sub get_system {
 	my $system;
 
-	my $current_repo = Renard::Devops::Repo->new(
-		path => File::Spec->rel2abs('.') );
+	if( Renard::Devops::Conditional::is_under_travis_ci() ) {
+		if ( Renard::Devops::Conditional::is_under_travis_ci_osx() ) {
+			say STDERR "Running under Travis CI osx";
+			$system = 'Renard::Devops::Env::MacOS::Homebrew';
+		} elsif( Renard::Devops::Conditional::is_under_travis_ci_linux() ) {
+			say STDERR "Running under Travis CI linux";
+			$system = 'Renard::Devops::Env::Linux::Debian';
+		}
+	} elsif( Renard::Devops::Conditional::is_under_appveyor_ci() ) {
+		say STDERR "Running under Appveyor";
+		$system = 'Renard::Devops::Env::MSWin::MSYS2';
+	}
 
-	if( @ARGV == 0 || $ARGV[0] eq 'install' || $ARGV[0] eq 'test' ) {
+	return $system;
+}
+
+sub get_devops_branch {
+	unless( -d $devops_dir ) {
+		say STDERR "Cloning from devops [branch: $ENV{DEVOPS_BRANCH}]";
+		clone_repo('https://github.com/project-renard/devops.git', $ENV{DEVOPS_BRANCH} // 'master' );
+	}
+}
+
+sub main {
+	my $current_repo = Renard::Devops::Repo->new(
+		path => File::Spec->rel2abs('.'),
+		main_repo => 1, );
+
+	my $mode;
+	if( @ARGV == 0 ) {
 		$mode = 'auto';
+	} elsif( $ARGV[0] eq 'install' ) {
+		$mode = 'install';
+	} elsif( $ARGV[0] eq 'test' ) {
+		$mode = 'test';
 	} elsif( $ARGV[0] eq 'vagrant' ) {
 		$mode = 'vagrant';
 	} else {
 		die "Unknown mode";
 	}
 
-	if( $mode eq 'auto' ) {
-		unless( exists $ENV{DEVOPS_BRANCH} && $ENV{DEVOPS_BRANCH} ) {
-			$ENV{DEVOPS_BRANCH} = 'master';
-		}
-		unless( -d $devops_dir ) {
-			say STDERR "Cloning from devops [branch: $ENV{DEVOPS_BRANCH}]";
-			system(
-				qw(git clone),
-				qw(-b), $ENV{DEVOPS_BRANCH},
-				qw(https://github.com/project-renard/devops.git), $devops_dir,
-			) == 0 or die "Could not clone devops directory: $!";
-		}
-		if( Renard::Devops::Conditional::is_under_travis_ci() ) {
-			if ( Renard::Devops::Conditional::is_under_travis_ci_osx() ) {
-				say STDERR "Running under Travis CI osx";
-				$system = 'Renard::Devops::Env::MacOS::Homebrew';
-			} elsif( Renard::Devops::Conditional::is_under_travis_ci_linux() ) {
-				say STDERR "Running under Travis CI linux";
-				$system = 'Renard::Devops::Env::Linux::Debian';
-			}
-
-			stage_before_install($system, $current_repo);
-			stage_install($system, $current_repo);
-		} elsif( Renard::Devops::Conditional::is_under_appveyor_ci() ) {
-			$system = 'Renard::Devops::Env::MSWin::MSYS2';
-			if( $ARGV[0] eq 'install' ) {
-				say STDERR "Running under Appveyor install";
-
-				stage_before_install($system, $current_repo);
-				stage_install($system, $current_repo);
-
-			} elsif( $ARGV[0] eq 'test' ) {
-				say STDERR "Running under Appveyor test";
-
-				stage_test($system, $current_repo);
-			}
-		}
+	my $system = get_system();
+	if( $mode eq 'auto' || $mode eq 'install' ) {
+		stage_before_install($system, $current_repo);
+		stage_install($system, $current_repo);
 
 		say STDERR "Shell commands:\n===========\n$shell_script_commands\n===========";
 
 		say "#START\n".$shell_script_commands."\n#END";
+	} elsif( $mode eq 'test' ) {
+		stage_test($system, $current_repo);
 	} elsif( $mode eq 'vagrant' ) {
 		$ENV{UNDER_VAGRANT} = 1;
 		$system = 'Renard::Devops::Env::Vagrant';
@@ -98,8 +103,8 @@ sub stage_before_install {
 
 	get_aux_repo($current_repo);
 	main::add_to_shell_script( <<'EOF' );
-		export RENARD_TEST_DATA_PATH="external/project-renard/test-data";
-		export RENARD_SCRIPT_BASE="external/project-renard/devops/script";
+		export RENARD_TEST_DATA_PATH='external/project-renard/test-data';
+		export RENARD_SCRIPT_BASE='external/project-renard/devops/script';
 EOF
 
 	$system->pre_native;
@@ -111,6 +116,32 @@ sub stage_install {
 
 	$system->repo_install_native($current_repo);
 	$system->repo_install_perl($current_repo);
+}
+
+sub clone_repo {
+	my ($url, $branch) = @_;
+	$branch = 'master' unless $branch;
+
+	say STDERR "Cloning $url @ [branch: $branch]";
+	my ($parts) = $url =~ m,^https?://[^/]+/(.+?)(?:\.git)?$,;
+	my $path = File::Spec->catfile('external', split(m|/|, $parts));
+
+	unless( -d $path ) {
+		system(qw(git clone),
+			qw(-b), $branch,
+			$url,
+			$path) == 0
+		or die "Could not clone $url @ $branch";
+	} else {
+		chomp(my $branch_on_disk = `cd $path && git rev-parse --abbrev-ref HEAD`);
+		if( $branch_on_disk eq $branch ) {
+			say STDERR "Not cloning $url : already have branch $branch";
+		} else {
+			say STDERR "Not cloning $url : wanted $branch but $branch_on_disk is cloned";
+		}
+	}
+
+	return $path;
 }
 
 sub stage_test {
@@ -125,10 +156,7 @@ sub get_aux_repo {
 	for my $repo (qw(devops test-data)) {
 		unless( -d "external/project-renard/$repo" ) {
 			say STDERR "Cloning $repo";
-			system(qw(git clone),
-				"https://github.com/project-renard/$repo.git",
-				"external/project-renard/$repo") == 0
-			or die "Could not clone $repo";
+			clone_repo("https://github.com/project-renard/$repo.git");
 		}
 	}
 }
@@ -220,7 +248,7 @@ package Renard::Devops::Env::MacOS::Homebrew {
 		# Set up for libffi linking
 		unshift @PKG_CONFIG_PATH, '/usr/local/opt/libffi/lib/pkgconfig';
 		main::add_to_shell_script( <<EOF );
-			export PKG_CONFIG_PATH="$ENV{PKG_CONFIG_PATH}";
+			export PKG_CONFIG_PATH='$ENV{PKG_CONFIG_PATH}';
 EOF
 	}
 
@@ -228,7 +256,7 @@ EOF
 		system(qw(brew install cpanm)) == 0
 			or die "Could not install cpanm";
 
-		# Create a local::lib
+		say STDERR "Create a local::lib";
 		system(qw(cpanm --local-lib=~/perl5 local::lib));
 		main::add_to_shell_script(<<'EOF');
 			eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib);
@@ -239,9 +267,8 @@ EOF
 		my ($system, $repo) = @_;
 
 		my $deps = $repo->homebrew_packages_path;
-		system( <<"EOF" );
-		sed 's/#.*//' < $deps | xargs brew install
-EOF
+		say STDERR "Installing repo native deps";
+		system( qq{sed 's/#.*//' $deps | xargs brew install} );
 	}
 
 	sub repo_install_perl {
@@ -256,9 +283,10 @@ EOF
 		function cpanm {
 			eval \$(perl -I ~/perl5/lib/perl5/ -Mlocal::lib);
 			if [ -r $dist_ini ]; then
-				cpanm -n Dist::Zilla;
-				dzil authordeps | cpanm -n;
-				dzil listdeps | grep -v '^Possibly harmless' | cpanm -n;
+				command cpanm -n Dist::Zilla;
+				dzil authordeps | command cpanm -n;
+				command cpanm -n Function::Parameters;
+				dzil listdeps | grep -v $filter_grep | command cpanm -n;
 			else
 				echo 'Installing deps';
 				command cpanm -n Function::Parameters;
@@ -419,12 +447,6 @@ EOF
 		my $repo_path_orig = $repo->path;
 		chomp(my $repo_path = `cygpath -u $repo_path_orig`);
 		chomp(my $dist_ini = `cygpath -u $dist_ini_orig`);
-		my $filter_grep = ''
-			. q| -e '^Possibly harmless'|
-			. q| -e '^Attempt to reload.*aborted'|
-			. q| -e 'BEGIN failed--compilation aborted'|
-			. q| -e '^Can.*t locate.*in \@INC'|
-			. q| -e '^Compilation failed in require'|;
 		run_under_mingw( <<EOF );
 			cd $repo_path;
 
@@ -495,7 +517,9 @@ package Renard::Devops::Repo {
 		my $data = {};
 
 		$data->{_path} = $opt{path} if exists $opt{path};
-		# TODO need to indicate if this is the main repo
+
+		# need to indicate if this is the main repo
+		$data->{_main_repo} = 0 unless exists $opt{main_repo} && $opt{main_repo};
 
 		die "Path $data->{_path} is not readable directory"
 			unless -d $data->{_path} and -r $data->{_path};
@@ -503,6 +527,7 @@ package Renard::Devops::Repo {
 		return bless $data, $class;
 	}
 	sub path { $_[0]->{_path} }
+	sub main_repo { $_[0]->{_main_repo} }
 
 	sub cpanfile_git_data {
 		my ($self) = @_;
