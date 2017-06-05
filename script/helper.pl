@@ -239,8 +239,8 @@ EOF
 		my ($system, $repo) = @_;
 
 		my $deps = $repo->homebrew_packages_path;
-		main::add_to_shell_script( <<"EOF" );
-		( sed 's/#.*//' < $deps | xargs brew install );
+		system( <<"EOF" );
+		sed 's/#.*//' < $deps | xargs brew install
 EOF
 	}
 
