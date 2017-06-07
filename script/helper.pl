@@ -31,6 +31,34 @@ our $filter_grep = ''
 	. q| -e '^Can.*t locate.*in \@INC'|
 	. q| -e '^Compilation failed in require'|;
 
+our $INSTALL_VIA_CPANM = <<EOF;
+		n=0;
+		until [ \$n -ge 3 ]; do
+			cpanm --notest --installdeps .
+			n=\$[n+1];
+		done
+EOF
+
+our $INSTALL_VIA_DZIL = <<EOF;
+			export DZIL=\$(which dzil);
+
+			n=0;
+			until [ \$n -ge 3 ]; do
+				perl \$DZIL authordeps | xargs cpanm -f -n && break;
+				echo '=== authordeps missing ==='
+				perl \$DZIL authordeps --missing
+				echo '=========================='
+				n=\$[n+1];
+			done
+
+			n=0;
+			until [ \$n -ge 3 ]; do
+				perl \$DZIL listdeps | grep -v $filter_grep
+				perl \$DZIL listdeps | grep -v $filter_grep | cpanm -n && break;
+				n=\$[n+1];
+			done
+EOF
+
 sub add_to_shell_script {
 	my ($cmd) = @_;
 	$shell_script_commands .= "$cmd\n";
@@ -440,67 +468,69 @@ EOF
 EOF
 	}
 
+	sub pre_install_dzil {
+		run_under_mingw( <<EOF );
+			cpanm -n Term::ReadKey --build-args=RM=echo;
+			cpanm Win32::Process
+
+			n=0;
+			until [ \$n -ge 3 ]; do
+				cpanm -f -n Dist::Zilla && break;
+				n=\$[n+1];
+			done
+
+			export DZIL=\$(which dzil);
+			sed -i 's,/usr/bin/perl,'\$(which perl), \$DZIL
+EOF
+	}
+
+	sub _install_env {
+		return <<EOF;
+			. \$APPVEYOR_BUILD_FOLDER/$devops_dir/script/mswin/EUMMnosearch.sh;
+			export MAKEFLAGS='-j4 -P4';
+EOF
+	}
+
+	sub repo_install_via_dzil {
+		my ($system, $repo) = @_;
+		$system->pre_install_dzil;
+		my $repo_path = $system->get_repo_path_cygwin($repo);
+		run_under_mingw( "cd $repo_path; " . _install_env() . $INSTALL_VIA_DZIL );
+	}
+
+	sub repo_install_via_cpanm {
+		my ($system, $repo) = @_;
+		my $repo_path = $system->get_repo_path_cygwin($repo);
+		run_under_mingw( "cd $repo_path; " . _install_env() . $INSTALL_VIA_CPANM );
+	}
+
 	sub repo_install_perl {
 		my ($system, $repo) = @_;
 
-		my $dist_ini_orig = File::Spec->catfile($repo->path, 'dist.ini');
+		my $dist_ini = File::Spec->catfile($repo->path, 'dist.ini');
+		if( -r $dist_ini ) {
+			$system->repo_install_via_dzil($repo);
+		} else {
+			$system->repo_install_via_cpanm($repo);
+		}
+	}
+
+
+
+	sub get_repo_path_cygwin {
+		my ($system, $repo) = @_;
 		my $repo_path_orig = $repo->path;
 		chomp(my $repo_path = `cygpath -u $repo_path_orig`);
-		chomp(my $dist_ini = `cygpath -u $dist_ini_orig`);
-		run_under_mingw( <<EOF );
-			cd $repo_path;
 
-			. \$APPVEYOR_BUILD_FOLDER/$devops_dir/script/mswin/EUMMnosearch.sh;
-			export MAKEFLAGS='-j4 -P4';
-
-			if [ -r $dist_ini ]; then
-				cpanm -n Term::ReadKey --build-args=RM=echo;
-				cpanm Win32::Process
-
-				n=0;
-				until [ \$n -ge 3 ]; do
-					cpanm -f -n Dist::Zilla && break;
-					n=\$[n+1];
-				done
-
-				export DZIL=\$(which dzil);
-				sed -i 's,/usr/bin/perl,'\$(which perl), \$DZIL
-
-				n=0;
-				until [ \$n -ge 3 ]; do
-					perl \$DZIL authordeps | xargs cpanm -f -n && break;
-					echo '=== authordeps missing ==='
-					perl \$DZIL authordeps --missing
-					echo '=========================='
-					n=\$[n+1];
-				done
-
-				n=0;
-				until [ \$n -ge 3 ]; do
-					perl \$DZIL listdeps | grep -v $filter_grep
-					perl \$DZIL listdeps | grep -v $filter_grep | cpanm -n && break;
-					n=\$[n+1];
-				done
-			else
-				# Install via cpanfile
-
-				n=0;
-				until [ \$n -ge 3 ]; do
-					cpanm --notest --installdeps .
-					n=\$[n+1];
-				done
-			fi;
-EOF
+		$repo_path;
 	}
 
 	sub repo_test {
 		my ($system, $repo) = @_;
 
-		my $repo_path_orig = $repo->path;
-		chomp(my $repo_path = `cygpath -u $repo_path_orig`);
+		my $repo_path = $system->get_repo_path_cygwin($repo);
 		my $ret = run_under_mingw( <<EOF );
 			cd $repo_path;
-			#eval \$(perl -I ~/perl5/lib/perl5/ -Mlocal::lib);
 
 			export TEST_JOBS=4;
 			. external/project-renard/devops/ENV.sh;
