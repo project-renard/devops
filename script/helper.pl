@@ -575,14 +575,14 @@ package Renard::Devops::Repo {
 	}
 
 	sub debian_packages_path {
-		File::Spec->catfile( $_[0]->path, qw(maint debian-packages) );
+		File::Spec->catfile( $_[0]->path, qw(maint packages-debian) );
 	}
 
 	sub homebrew_packages_path {
-		File::Spec->catfile( $_[0]->path, qw(maint homebrew-packages));
+		File::Spec->catfile( $_[0]->path, qw(maint packages-homebrew));
 	}
 
 	sub msys2_mingw64_packages_path {
-		File::Spec->catfile( $_[0]->path, qw(maint msys2-mingw64-packages));
+		File::Spec->catfile( $_[0]->path, qw(maint packages-msys2-mingw64));
 	}
 };
