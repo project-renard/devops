@@ -31,32 +31,44 @@ our $filter_grep = ''
 	. q| -e '^Can.*t locate.*in \@INC'|
 	. q| -e '^Compilation failed in require'|;
 
+our $INSTALL_CMD_VIA_CPANM = <<EOF;
+	cpanm --notest .;
+EOF
 our $INSTALL_VIA_CPANM = <<EOF;
-		n=0;
-		until [ \$n -ge 3 ]; do
-			cpanm --notest --installdeps .
-			n=\$[n+1];
-		done
+	n=0;
+	until [ \$n -ge 3 ]; do
+		cpanm --notest --installdeps .
+		n=\$[n+1];
+	done;
 EOF
 
+our $INSTALL_CMD_VIA_DZIL = <<EOF;
+	export DZIL=\$(which dzil);
+
+	n=0;
+	until [ \$n -ge 3 ]; do
+		perl \$DZIL build --in build-dir;
+		cpanm --notest ./build-dir && break;
+	done;
+EOF
 our $INSTALL_VIA_DZIL = <<EOF;
-			export DZIL=\$(which dzil);
+	export DZIL=\$(which dzil);
 
-			n=0;
-			until [ \$n -ge 3 ]; do
-				perl \$DZIL authordeps | xargs cpanm -f -n && break;
-				echo '=== authordeps missing ==='
-				perl \$DZIL authordeps --missing
-				echo '=========================='
-				n=\$[n+1];
-			done
+	n=0;
+	until [ \$n -ge 3 ]; do
+		perl \$DZIL authordeps | xargs cpanm -n && break;
+		echo '=== authordeps missing ==='
+		perl \$DZIL authordeps --missing
+		echo '=========================='
+		n=\$[n+1];
+	done
 
-			n=0;
-			until [ \$n -ge 3 ]; do
-				perl \$DZIL listdeps | grep -v $filter_grep
-				perl \$DZIL listdeps | grep -v $filter_grep | cpanm -n && break;
-				n=\$[n+1];
-			done
+	n=0;
+	until [ \$n -ge 3 ]; do
+		perl \$DZIL listdeps | grep -v $filter_grep
+		perl \$DZIL listdeps | grep -v $filter_grep | cpanm -n && break;
+		n=\$[n+1];
+	done
 EOF
 
 sub add_to_shell_script {
@@ -91,15 +103,13 @@ sub get_devops_branch {
 }
 
 sub main {
-	my $current_repo = Renard::Devops::Repo->new(
-		path => File::Spec->rel2abs('.'),
-		main_repo => 1, );
-
 	my $mode;
 	if( @ARGV == 0 ) {
 		$mode = 'auto';
 	} elsif( $ARGV[0] eq 'install' ) {
 		$mode = 'install';
+	} elsif( $ARGV[0] eq 'install-perl-dep' ) {
+		$mode = 'install-perl-dep';
 	} elsif( $ARGV[0] eq 'test' ) {
 		$mode = 'test';
 	} elsif( $ARGV[0] eq 'vagrant' ) {
@@ -108,8 +118,13 @@ sub main {
 		die "Unknown mode";
 	}
 
+	my $current_repo = Renard::Devops::Repo->new(
+		path => File::Spec->rel2abs('.'),
+		main_repo => ( $mode ne 'install-perl-dep' ) , );
+
 	my $system = get_system();
 	if( $mode eq 'auto' || $mode eq 'install' ) {
+		get_devops_branch();
 		stage_before_install($system, $current_repo);
 		stage_install($system, $current_repo);
 
@@ -118,6 +133,8 @@ sub main {
 		say "#START\n".$shell_script_commands."\n#END";
 	} elsif( $mode eq 'test' ) {
 		stage_test($system, $current_repo);
+	} elsif( $mode eq 'install-perl-dep' ) {
+		$system->repo_install_perl_dep($current_repo);
 	} elsif( $mode eq 'vagrant' ) {
 		$ENV{UNDER_VAGRANT} = 1;
 		$system = 'Renard::Devops::Env::Vagrant';
@@ -141,6 +158,15 @@ EOF
 
 sub stage_install {
 	my ($system, $current_repo) = @_;
+
+	my $deps = $current_repo->cpanfile_git_data;
+	my @values = values %$deps;
+	for my $repos (@values) {
+		my $path = clone_repo( $repos->{git}, $repos->{branch} );
+		my $repo = Renard::Devops::Repo->new( path => $path );
+
+		stage_install($system, $repo);
+	}
 
 	$system->repo_install_native($current_repo);
 	$system->repo_install_perl($current_repo);
@@ -285,9 +311,14 @@ EOF
 			or die "Could not install cpanm";
 
 		say STDERR "Create a local::lib";
-		system(qw(cpanm --local-lib=~/perl5 local::lib));
+		system(q(cpanm --local-lib=~/perl5 local::lib));
+		push @INC, "$ENV{HOME}/perl5/lib/perl5";
+		require local::lib;
+		local::lib->setup_env_hash_for("$ENV{HOME}/perl5");
+		system(qw(cpanm Module::CPANfile));
 		main::add_to_shell_script(<<'EOF');
 			eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib);
+			export ARCHFLAGS='-arch x86_64';
 EOF
 	}
 
@@ -306,29 +337,55 @@ EOF
 		# Default for install: cpanm --quiet --installdeps --notest .
 		# Default for script: make test (no M::B or EUMM)
 		my $dist_ini = File::Spec->catfile($repo->path, 'dist.ini');
-		main::add_to_shell_script( <<EOF );
-		export ARCHFLAGS='-arch x86_64';
-		function cpanm {
-			eval \$(perl -I ~/perl5/lib/perl5/ -Mlocal::lib);
-			if [ -r $dist_ini ]; then
-				command cpanm -n Dist::Zilla;
-				dzil authordeps | command cpanm -n;
-				command cpanm -n Function::Parameters;
-				dzil listdeps | grep -v $filter_grep | command cpanm -n;
-			else
-				echo 'Installing deps';
-				command cpanm -n Function::Parameters;
-				command cpanm --notest --installdeps .;
-			fi;
-		};
+		my $helper_script = File::Spec->catfile($devops_dir, qw(script helper.pl));
 
-		function make {
-			export TEST_JOBS=4;
-			if [ "\$#" == 1 ] && [ "\$1" == "test" ]; then
-				prove -j\${TEST_JOBS} -lvr t;
-			fi;
-		};
+		if( $repo->main_repo ) {
+			main::add_to_shell_script( <<EOF );
+			function cpanm {
+				eval \$(perl -I ~/perl5/lib/perl5/ -Mlocal::lib);
+				if [ -r $dist_ini ]; then
+					command cpanm -n Moose Dist::Zilla;
+					dzil authordeps | command cpanm -n;
+					command cpanm -n Function::Parameters;
+					dzil listdeps | grep -v $filter_grep | command cpanm -n;
+				else
+					echo 'Installing deps';
+					command cpanm -n Function::Parameters;
+					command cpanm --notest --installdeps .;
+				fi;
+			};
+
+			function make {
+				export TEST_JOBS=4;
+				if [ "\$#" == 1 ] && [ "\$1" == "test" ]; then
+					prove -j\${TEST_JOBS} -lvr t;
+				fi;
+			};
 EOF
+		} else {
+			my $helper_script = File::Spec->rel2abs(File::Spec->catfile($devops_dir, qw(script helper.pl)));
+			my $repo_path = $repo->path;
+			main::add_to_shell_script( <<EOF );
+				( cd $repo_path; perl $helper_script install-perl-dep );
+EOF
+		}
+	}
+
+	sub repo_install_perl_dep {
+		my ($system, $repo) = @_;
+
+		my $dist_ini = File::Spec->catfile($repo->path, 'dist.ini');
+		my $repo_path = $repo->path;
+		if( -r $dist_ini ) {
+			# Need to also install Moose so that we have the latest
+			# that can be used with Module::Runtime >= 0.014
+			system(q|cpanm -n Moose Dist::Zilla|);
+			system( "cd $repo_path; " . $INSTALL_VIA_DZIL
+				. ( ! $repo->main_repo ? $INSTALL_CMD_VIA_DZIL : '' )  );
+		} else {
+			system( "cd $repo_path; " . $INSTALL_VIA_CPANM
+				. ( ! $repo->main_repo ? $INSTALL_CMD_VIA_CPANM : '' )  );
+		}
 	}
 
 	sub repo_test {
@@ -342,21 +399,34 @@ EOF
 };
 
 package Renard::Devops::Env::Linux::Debian {
+	use Env qw(@PATH);
+
 	sub pre_native {
 		if( Renard::Devops::Conditional::is_under_travis_ci_linux() ) {
 			# start xvfb (for headless env)
 			# give xvfb some time to start
 			main::add_to_shell_script( <<'EOF' );
 				export DISPLAY=:99.0;
-				sh -e /etc/init.d/xvfb start || return $?;
-				sleep 3
+				sh -e /etc/init.d/xvfb start;
+				sleep 3;
 EOF
 		}
 	}
 
 	sub pre_perl {
 		if( Renard::Devops::Conditional::is_under_travis_ci_linux() ) {
+			system(q(curl -L http://cpanmin.us | perl - --self-upgrade));
+			push @PATH, "$ENV{HOME}/perl5/bin";
+			system(q(cpanm --local-lib=~/perl5 local::lib));
+			push @INC, "$ENV{HOME}/perl5/lib/perl5";
+			require local::lib;
+			local::lib->setup_env_hash_for("$ENV{HOME}/perl5");
+			system(q(cpanm Module::CPANfile));
 			# Perl will be set up by Travis Perl helpers
+			main::add_to_shell_script( <<'EOF' );
+				eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib);
+				eval $(curl https://travis-perl.github.io/init) --auto;
+EOF
 			return;
 		}
 	}
@@ -374,20 +444,41 @@ EOF
 		my ($system, $repo) = @_;
 
 		# NOTE: we only run coverage on Linux.
-		main::add_to_shell_script( <<'EOF' );
-		cpanm --local-lib=~/perl5 local::lib && eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib);
-		eval $(curl https://travis-perl.github.io/init) --auto;
-
-		if [ -n "$COVERAGE" ] && [ "$COVERAGE" != "0" ]; then
-			echo "Make B::Deparse use Data::Dumper";
-			FULL_RENARD_SCRIPT_BASE=$(cd $RENARD_SCRIPT_BASE && pwd);
-			export PERL5LIB="${PERL5LIB}${PERL5LIB:+:}""$FULL_RENARD_SCRIPT_BASE/general";
-			export HARNESS_PERL_SWITCHES="${HARNESS_PERL_SWITCHES}${HARNESS_PERL_SWITCHES:+ }""-MDeparseDumper";
-			echo PERL5LIB="$PERL5LIB";
-			echo HARNESS_PERL_SWITCHES="$HARNESS_PERL_SWITCHES";
-		fi;
+		if( $repo->main_repo ) {
+			main::add_to_shell_script( <<'EOF' );
+			if [ -n "$COVERAGE" ] && [ "$COVERAGE" != "0" ]; then
+				echo "Make B::Deparse use Data::Dumper";
+				FULL_RENARD_SCRIPT_BASE=$(cd $RENARD_SCRIPT_BASE && pwd);
+				export PERL5LIB="${PERL5LIB}${PERL5LIB:+:}""$FULL_RENARD_SCRIPT_BASE/general";
+				export HARNESS_PERL_SWITCHES="${HARNESS_PERL_SWITCHES}${HARNESS_PERL_SWITCHES:+ }""-MDeparseDumper";
+				echo PERL5LIB="$PERL5LIB";
+				echo HARNESS_PERL_SWITCHES="$HARNESS_PERL_SWITCHES";
+			fi;
 EOF
+		} else {
+			my $helper_script = File::Spec->rel2abs(File::Spec->catfile($devops_dir, qw(script helper.pl)));
+			my $repo_path = $repo->path;
+			main::add_to_shell_script( <<EOF );
+				( cd $repo_path; perl $helper_script install-perl-dep );
+EOF
+		}
 	}
+
+	sub repo_install_perl_dep {
+		my ($system, $repo) = @_;
+
+		my $dist_ini = File::Spec->catfile($repo->path, 'dist.ini');
+		my $repo_path = $repo->path;
+		if( -r $dist_ini ) {
+			system(q|cpanm -n Dist::Zilla|);
+			system( "cd $repo_path; " . $INSTALL_VIA_DZIL
+				. ( ! $repo->main_repo ? $INSTALL_CMD_VIA_DZIL : '' )  );
+		} else {
+			system( "cd $repo_path; " . $INSTALL_VIA_CPANM
+				. ( ! $repo->main_repo ? $INSTALL_CMD_VIA_CPANM : '' )  );
+		}
+	}
+
 
 	sub repo_test {
 		my ($system, $repo) = @_;
@@ -424,6 +515,10 @@ package Renard::Devops::Env::MSWin::MSYS2 {
   #@echo on
   #SET "PATH=C:\%MSYS2_DIR%\%MSYSTEM%\bin;C:\%MSYS2_DIR%\usr\bin;%PATH%"
 
+		system(q{cpan App::cpanminus});
+		say STDERR 'Installing Module::CPANfile for the system Perl';
+		system(q|cpanm --notest Module::CPANfile|);
+
 		# Appveyor under MSYS2/MinGW64
 		run_under_mingw( <<EOF );
 			pacman -S --needed --noconfirm pacman-mirrors;
@@ -453,6 +548,7 @@ EOF
 			pl2bat `which pl2bat`;
 			yes | cpan App::cpanminus;
 			cpanm --notest ExtUtils::MakeMaker Module::Build;
+			cpanm --notest Module::CPANfile;
 EOF
 	}
 
@@ -469,13 +565,14 @@ EOF
 	}
 
 	sub pre_install_dzil {
-		run_under_mingw( <<EOF );
+		run_under_mingw( _install_env() . <<EOF );
+			pacman -S --needed --noconfirm mingw-w64-x86_64-openssl
 			cpanm -n Term::ReadKey --build-args=RM=echo;
 			cpanm Win32::Process
 
 			n=0;
 			until [ \$n -ge 3 ]; do
-				cpanm -f -n Dist::Zilla && break;
+				cpanm -n Dist::Zilla && break;
 				n=\$[n+1];
 			done
 
@@ -495,13 +592,15 @@ EOF
 		my ($system, $repo) = @_;
 		$system->pre_install_dzil;
 		my $repo_path = $system->get_repo_path_cygwin($repo);
-		run_under_mingw( "cd $repo_path; " . _install_env() . $INSTALL_VIA_DZIL );
+		run_under_mingw( "cd $repo_path; " . _install_env() . $INSTALL_VIA_DZIL
+			. ( ! $repo->main_repo ? $INSTALL_CMD_VIA_DZIL : '' )  );
 	}
 
 	sub repo_install_via_cpanm {
 		my ($system, $repo) = @_;
 		my $repo_path = $system->get_repo_path_cygwin($repo);
-		run_under_mingw( "cd $repo_path; " . _install_env() . $INSTALL_VIA_CPANM );
+		run_under_mingw( "cd $repo_path; " . _install_env() . $INSTALL_VIA_CPANM
+			. ( ! $repo->main_repo ? $INSTALL_CMD_VIA_CPANM : '' )  );
 	}
 
 	sub repo_install_perl {
@@ -548,11 +647,11 @@ package Renard::Devops::Repo {
 
 		$data->{_path} = $opt{path} if exists $opt{path};
 
-		# need to indicate if this is the main repo
-		$data->{_main_repo} = 0 unless exists $opt{main_repo} && $opt{main_repo};
-
 		die "Path $data->{_path} is not readable directory"
 			unless -d $data->{_path} and -r $data->{_path};
+
+		# need to indicate if this is the main repo
+		$data->{_main_repo} = $opt{main_repo} // 0;
 
 		return bless $data, $class;
 	}
@@ -562,10 +661,13 @@ package Renard::Devops::Repo {
 	sub cpanfile_git_data {
 		my ($self) = @_;
 
-		require Module::CPANfile;
+		eval  {
+			require Module::CPANfile;
+		} or die "Could not load Module::CPANfile";
+
 		my $data = {};
 		my $cpanfile_git_path = File::Spec->catfile($self->path, qw(maint cpanfile-git));
-		if ( -f $cpanfile_git_path  ) {
+		if ( -r $cpanfile_git_path  ) {
 			my $m = Module::CPANfile->load($cpanfile_git_path);
 			$data = +{ map { $_->requirement->name => $_->requirement->options }
 				@{ $m->{_prereqs}->{prereqs} } }
