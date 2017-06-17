@@ -114,6 +114,8 @@ renard_run_cover_on_branch () {
 	fi
 	(
 		export HARNESS_PERL_SWITCHES="-MDevel::Cover=-db,$COVER_DIR,+ignore,^x?t/,-silent,$DEVEL_COVER_SILENT"
+		export PERL5LIB="${PERL5LIB}${PERL5LIB:+:}""$RENARD_SCRIPT_BASE/general";
+		export HARNESS_PERL_SWITCHES="${HARNESS_PERL_SWITCHES}${HARNESS_PERL_SWITCHES:+ }""-MDeparseDumper";
 		git co $BRANCH
 		cover $COVER_DIR -delete
 		prove -lvr t # xt
@@ -145,6 +147,8 @@ renard_run_cover_on_branch_dzil () {
 
 	(
 		export HARNESS_PERL_SWITCHES="-MDevel::Cover=-db,$COVER_DIR,+ignore,^x?t/"
+		export PERL5LIB="${PERL5LIB}${PERL5LIB:+:}""$RENARD_SCRIPT_BASE/general";
+		export HARNESS_PERL_SWITCHES="${HARNESS_PERL_SWITCHES}${HARNESS_PERL_SWITCHES:+ }""-MDeparseDumper";
 		git co $BRANCH
 		cover $COVER_DIR -delete
 		dzil test --all --keep
