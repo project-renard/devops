@@ -95,30 +95,25 @@ USAGE
 ##     cpanm Pod::Coverage
 renard_run_cover_on_branch () {
 	_check_in_wrapper;
-	BRANCH="$1";
-	if [ -z "$BRANCH" ]; then
-		# set branch to the name of the current branch
-		BRANCH=`git rev-parse --abbrev-ref HEAD`
-	fi
+	BRANCH=$(_renard_get_branch "$1")
+	COVER_DIR=$(_renard_get_cover_dir $BRANCH);
 
-	COVER_DIR="cover_db/$BRANCH"
-	if [ 1 == "$RENARD_IN_WRAPPER" ]; then
-		# move to directory above
-		COVER_DIR="../$COVER_DIR"
+	FILE="$2";
+	if [ -z "$FILE" ]; then
+		# set branch to the name of the current branch
+		FILE="t" # xt
 	fi
-	mkdir -p "$COVER_DIR"
-	COVER_DIR=$(cd $COVER_DIR && pwd)
 
 	if [ -z "$DEVEL_COVER_SILENT" ]; then
 		DEVEL_COVER_SILENT=1
 	fi
 	(
-		export HARNESS_PERL_SWITCHES="-MDevel::Cover=-db,$COVER_DIR,+ignore,^x?t/,-silent,$DEVEL_COVER_SILENT"
+		export HARNESS_PERL_SWITCHES="${HARNESS_PERL_SWITCHES}${HARNESS_PERL_SWITCHES:+ }""-MDevel::Cover=-db,$COVER_DIR,+ignore,^x?t/,-silent,$DEVEL_COVER_SILENT"
 		export PERL5LIB="${PERL5LIB}${PERL5LIB:+:}""$RENARD_SCRIPT_BASE/general";
 		export HARNESS_PERL_SWITCHES="${HARNESS_PERL_SWITCHES}${HARNESS_PERL_SWITCHES:+ }""-MDeparseDumper";
 		git co $BRANCH
 		cover $COVER_DIR -delete
-		prove -lvr t # xt
+		prove -lvr $FILE
 		cover $COVER_DIR -report html #+ignore '^x?t/'
 		cover $COVER_DIR -report vim  #+ignore '^x?t/'
 		#see $COVER_DIR/coverage.html
@@ -131,22 +126,11 @@ renard_run_cover_on_branch () {
 ## the test harness.
 renard_run_cover_on_branch_dzil () {
 	_check_in_wrapper;
-	BRANCH="$1";
-	if [ -z "$BRANCH" ]; then
-		# set branch to the name of the current branch
-		BRANCH=`git rev-parse --abbrev-ref HEAD`
-	fi
-
-	COVER_DIR="cover_db/$BRANCH"
-	if [ 1 == "$RENARD_IN_WRAPPER" ]; then
-		# move to directory above
-		COVER_DIR="../$COVER_DIR"
-	fi
-	mkdir -p "$COVER_DIR"
-	COVER_DIR=$(cd $COVER_DIR && pwd)
+	BRANCH=$(_renard_get_branch "$1")
+	COVER_DIR=$(_renard_get_cover_dir $BRANCH);
 
 	(
-		export HARNESS_PERL_SWITCHES="-MDevel::Cover=-db,$COVER_DIR,+ignore,^x?t/"
+		export HARNESS_PERL_SWITCHES="${HARNESS_PERL_SWITCHES}${HARNESS_PERL_SWITCHES:+ }""-MDevel::Cover=-db,$COVER_DIR,+ignore,^x?t/"
 		export PERL5LIB="${PERL5LIB}${PERL5LIB:+:}""$RENARD_SCRIPT_BASE/general";
 		export HARNESS_PERL_SWITCHES="${HARNESS_PERL_SWITCHES}${HARNESS_PERL_SWITCHES:+ }""-MDeparseDumper";
 		git co $BRANCH
@@ -155,6 +139,34 @@ renard_run_cover_on_branch_dzil () {
 		( cd .build/latest && cover $COVER_DIR )
 		#see $COVER_DIR/coverage.html
 	)
+}
+
+
+_renard_get_branch() {
+	BRANCH="$1";
+	if [ -z "$BRANCH" ]; then
+		# set branch to the name of the current branch
+		BRANCH=`_renard_get_current_branch`
+	fi
+	echo $BRANCH
+}
+
+_renard_get_current_branch () {
+	git rev-parse --abbrev-ref HEAD
+}
+
+_renard_get_cover_dir () {
+	_check_in_wrapper;
+	BRANCH=$(_renard_get_branch "$1")
+	COVER_DIR="cover_db/$BRANCH"
+	if [ 1 == "$RENARD_IN_WRAPPER" ]; then
+		# move to directory above
+		COVER_DIR="../$COVER_DIR"
+	fi
+	mkdir -p "$COVER_DIR"
+	COVER_DIR=$(cd $COVER_DIR && pwd)
+
+	echo $COVER_DIR
 }
 
 
