@@ -344,7 +344,7 @@ EOF
 			function cpanm {
 				eval \$(perl -I ~/perl5/lib/perl5/ -Mlocal::lib);
 				if [ -r $dist_ini ]; then
-					command cpanm -n Moose Dist::Zilla;
+					command cpanm -n Moose~2.2005 Dist::Zilla;
 					dzil authordeps | command cpanm -n;
 					command cpanm -n Function::Parameters;
 					dzil listdeps | grep -v $filter_grep | command cpanm -n;
@@ -379,7 +379,7 @@ EOF
 		if( -r $dist_ini ) {
 			# Need to also install Moose so that we have the latest
 			# that can be used with Module::Runtime >= 0.014
-			system(q|cpanm -n Moose Dist::Zilla|);
+			system(q|cpanm -n Moose~2.2005 Dist::Zilla|);
 			system( "cd $repo_path; " . $INSTALL_VIA_DZIL
 				. ( ! $repo->main_repo ? $INSTALL_CMD_VIA_DZIL : '' )  );
 		} else {
