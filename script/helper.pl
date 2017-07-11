@@ -23,6 +23,8 @@ package Renard::Devops::Conditional {
 
 our $shell_script_commands = '';
 our $devops_dir = 'external/project-renard/devops';
+our $RENARD_DEVOPS_HOOK_PRE_PERL = '';
+our $RENARD_DEVOPS_HOOK_PRE_PERL_RAN = 0;
 
 our $filter_grep = ''
 	. q| -e '^Possibly harmless'|
@@ -121,6 +123,11 @@ sub main {
 	my $current_repo = Renard::Devops::Repo->new(
 		path => File::Spec->rel2abs('.'),
 		main_repo => ( $mode ne 'install-perl-dep' ) , );
+
+	$RENARD_DEVOPS_HOOK_PRE_PERL = $ENV{RENARD_DEVOPS_HOOK_PRE_PERL};
+	if( $RENARD_DEVOPS_HOOK_PRE_PERL && $RENARD_DEVOPS_HOOK_PRE_PERL !~ /;\s*$/ ) {
+		$RENARD_DEVOPS_HOOK_PRE_PERL .= ';';
+	}
 
 	my $system = get_system();
 	if( $mode eq 'auto' || $mode eq 'install' ) {
@@ -339,6 +346,11 @@ EOF
 		my $dist_ini = File::Spec->catfile($repo->path, 'dist.ini');
 		my $helper_script = File::Spec->catfile($devops_dir, qw(script helper.pl));
 
+		if( $RENARD_DEVOPS_HOOK_PRE_PERL &&  ! $RENARD_DEVOPS_HOOK_PRE_PERL_RAN ) {
+			main::add_to_shell_script($RENARD_DEVOPS_HOOK_PRE_PERL);
+			$RENARD_DEVOPS_HOOK_PRE_PERL_RAN = 1;
+		}
+
 		if( $repo->main_repo ) {
 			main::add_to_shell_script( <<EOF );
 			function cpanm {
@@ -442,6 +454,11 @@ EOF
 
 	sub repo_install_perl {
 		my ($system, $repo) = @_;
+
+		if( $RENARD_DEVOPS_HOOK_PRE_PERL &&  ! $RENARD_DEVOPS_HOOK_PRE_PERL_RAN ) {
+			main::add_to_shell_script($RENARD_DEVOPS_HOOK_PRE_PERL);
+			$RENARD_DEVOPS_HOOK_PRE_PERL_RAN = 1;
+		}
 
 		# NOTE: we only run coverage on Linux.
 		if( $repo->main_repo ) {
@@ -605,6 +622,11 @@ EOF
 
 	sub repo_install_perl {
 		my ($system, $repo) = @_;
+
+		if( $RENARD_DEVOPS_HOOK_PRE_PERL &&  ! $RENARD_DEVOPS_HOOK_PRE_PERL_RAN ) {
+			run_under_mingw($RENARD_DEVOPS_HOOK_PRE_PERL);
+			$RENARD_DEVOPS_HOOK_PRE_PERL_RAN = 1;
+		}
 
 		my $dist_ini = File::Spec->catfile($repo->path, 'dist.ini');
 		if( -r $dist_ini ) {
