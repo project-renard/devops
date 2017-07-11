@@ -41,7 +41,7 @@ our $INSTALL_VIA_CPANM = <<EOF;
 	n=0;
 	until [ \$n -ge $repeat_count ]; do
 		cpanm --notest --installdeps .
-		n=\$[n+1];
+		n=\$((n+1));
 	done;
 EOF
 
@@ -63,14 +63,14 @@ our $INSTALL_VIA_DZIL = <<EOF;
 		echo '=== authordeps missing ==='
 		perl \$DZIL authordeps --missing
 		echo '=========================='
-		n=\$[n+1];
+		n=\$((n+1));
 	done
 
 	n=0;
 	until [ \$n -ge $repeat_count ]; do
 		perl \$DZIL listdeps | grep -v $filter_grep
 		perl \$DZIL listdeps | grep -v $filter_grep | cpanm -n && break;
-		n=\$[n+1];
+		n=\$((n+1));
 	done
 EOF
 
@@ -591,7 +591,7 @@ EOF
 			n=0;
 			until [ \$n -ge $repeat_count ]; do
 				cpanm -n Dist::Zilla && break;
-				n=\$[n+1];
+				n=\$((n+1));
 			done
 
 			export DZIL=\$(which dzil);
