@@ -25,6 +25,7 @@ our $shell_script_commands = '';
 our $devops_dir = 'external/project-renard/devops';
 our $RENARD_DEVOPS_HOOK_PRE_PERL = '';
 our $RENARD_DEVOPS_HOOK_PRE_PERL_RAN = 0;
+our $repeat_count = 1;
 
 our $filter_grep = ''
 	. q| -e '^Possibly harmless'|
@@ -38,7 +39,7 @@ our $INSTALL_CMD_VIA_CPANM = <<EOF;
 EOF
 our $INSTALL_VIA_CPANM = <<EOF;
 	n=0;
-	until [ \$n -ge 3 ]; do
+	until [ \$n -ge $repeat_count ]; do
 		cpanm --notest --installdeps .
 		n=\$[n+1];
 	done;
@@ -48,7 +49,7 @@ our $INSTALL_CMD_VIA_DZIL = <<EOF;
 	export DZIL=\$(which dzil);
 
 	n=0;
-	until [ \$n -ge 3 ]; do
+	until [ \$n -ge $repeat_count ]; do
 		perl \$DZIL build --in build-dir;
 		cpanm --notest ./build-dir && break;
 	done;
@@ -57,7 +58,7 @@ our $INSTALL_VIA_DZIL = <<EOF;
 	export DZIL=\$(which dzil);
 
 	n=0;
-	until [ \$n -ge 3 ]; do
+	until [ \$n -ge $repeat_count ]; do
 		perl \$DZIL authordeps | xargs cpanm -n && break;
 		echo '=== authordeps missing ==='
 		perl \$DZIL authordeps --missing
@@ -66,7 +67,7 @@ our $INSTALL_VIA_DZIL = <<EOF;
 	done
 
 	n=0;
-	until [ \$n -ge 3 ]; do
+	until [ \$n -ge $repeat_count ]; do
 		perl \$DZIL listdeps | grep -v $filter_grep
 		perl \$DZIL listdeps | grep -v $filter_grep | cpanm -n && break;
 		n=\$[n+1];
@@ -588,7 +589,7 @@ EOF
 			cpanm Win32::Process
 
 			n=0;
-			until [ \$n -ge 3 ]; do
+			until [ \$n -ge $repeat_count ]; do
 				cpanm -n Dist::Zilla && break;
 				n=\$[n+1];
 			done
