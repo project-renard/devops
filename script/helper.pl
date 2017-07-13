@@ -25,19 +25,22 @@ our $shell_script_commands = '';
 our $devops_dir = 'external/project-renard/devops';
 our $RENARD_DEVOPS_HOOK_PRE_PERL = '';
 our $RENARD_DEVOPS_HOOK_PRE_PERL_RAN = 0;
-our $repeat_count = 1;
 
-our $filter_grep = ''
-	. q| -e '^Possibly harmless'|
-	. q| -e '^Attempt to reload.*aborted'|
-	. q| -e 'BEGIN failed--compilation aborted'|
-	. q| -e '^Can.*t locate.*in \@INC'|
-	. q| -e '^Compilation failed in require'|;
+package Renard::Devops::Dictionary {
+	our $repeat_count = 1;
 
-our $INSTALL_CMD_VIA_CPANM = <<EOF;
+	our $filter_grep = ''
+		. q| -e '^Possibly harmless'|
+		. q| -e '^Attempt to reload.*aborted'|
+		. q| -e 'BEGIN failed--compilation aborted'|
+		. q| -e '^Can.*t locate.*in \@INC'|
+		. q| -e '^Compilation failed in require'|;
+
+	our $INSTALL_CMD_VIA_CPANM = <<EOF;
 	cpanm --notest .;
 EOF
-our $INSTALL_VIA_CPANM = <<EOF;
+
+	our $INSTALL_VIA_CPANM = <<EOF;
 	n=0;
 	until [ \$n -ge $repeat_count ]; do
 		cpanm --notest --installdeps .
@@ -45,7 +48,7 @@ our $INSTALL_VIA_CPANM = <<EOF;
 	done;
 EOF
 
-our $INSTALL_CMD_VIA_DZIL = <<EOF;
+	our $INSTALL_CMD_VIA_DZIL = <<EOF;
 	export DZIL=\$(which dzil);
 
 	n=0;
@@ -54,7 +57,8 @@ our $INSTALL_CMD_VIA_DZIL = <<EOF;
 		cpanm --notest ./build-dir && break;
 	done;
 EOF
-our $INSTALL_VIA_DZIL = <<EOF;
+
+	our $INSTALL_VIA_DZIL = <<EOF;
 	export DZIL=\$(which dzil);
 
 	n=0;
@@ -73,6 +77,8 @@ our $INSTALL_VIA_DZIL = <<EOF;
 		n=\$((n+1));
 	done
 EOF
+}
+
 
 sub add_to_shell_script {
 	my ($cmd) = @_;
@@ -360,7 +366,7 @@ EOF
 					command cpanm -n Moose~2.2005 Dist::Zilla;
 					dzil authordeps | command cpanm -n;
 					command cpanm -n Function::Parameters;
-					dzil listdeps | grep -v $filter_grep | command cpanm -n;
+					dzil listdeps | grep -v @{[ $Renard::Devops::Dictionary::filter_grep ]} | command cpanm -n;
 				else
 					echo 'Installing deps';
 					command cpanm -n Function::Parameters;
@@ -393,11 +399,11 @@ EOF
 			# Need to also install Moose so that we have the latest
 			# that can be used with Module::Runtime >= 0.014
 			system(q|cpanm -n Moose~2.2005 Dist::Zilla|);
-			system( "cd $repo_path; " . $INSTALL_VIA_DZIL
-				. ( ! $repo->main_repo ? $INSTALL_CMD_VIA_DZIL : '' )  );
+			system( "cd $repo_path; " . $Renard::Devops::Dictionary::INSTALL_VIA_DZIL
+				. ( ! $repo->main_repo ? $Renard::Devops::DictionaryINSTALL_CMD_VIA_DZIL : '' )  );
 		} else {
-			system( "cd $repo_path; " . $INSTALL_VIA_CPANM
-				. ( ! $repo->main_repo ? $INSTALL_CMD_VIA_CPANM : '' )  );
+			system( "cd $repo_path; " . $Renard::Devops::Dictionary::INSTALL_VIA_CPANM
+				. ( ! $repo->main_repo ? $Renard::Devops::Dictionary::INSTALL_CMD_VIA_CPANM : '' )  );
 		}
 	}
 
@@ -489,11 +495,11 @@ EOF
 		my $repo_path = $repo->path;
 		if( -r $dist_ini ) {
 			system(q|cpanm -n Dist::Zilla|);
-			system( "cd $repo_path; " . $INSTALL_VIA_DZIL
-				. ( ! $repo->main_repo ? $INSTALL_CMD_VIA_DZIL : '' )  );
+			system( "cd $repo_path; " . $Renard::Devops::Dictionary::INSTALL_VIA_DZIL
+				. ( ! $repo->main_repo ? $Renard::Devops::DictionaryINSTALL_CMD_VIA_DZIL : '' )  );
 		} else {
-			system( "cd $repo_path; " . $INSTALL_VIA_CPANM
-				. ( ! $repo->main_repo ? $INSTALL_CMD_VIA_CPANM : '' )  );
+			system( "cd $repo_path; " . $Renard::Devops::Dictionary::INSTALL_VIA_CPANM
+				. ( ! $repo->main_repo ? $Renard::Devops::Dictionary::INSTALL_CMD_VIA_CPANM : '' )  );
 		}
 	}
 
@@ -589,7 +595,7 @@ EOF
 			cpanm Win32::Process
 
 			n=0;
-			until [ \$n -ge $repeat_count ]; do
+			until [ \$n -ge $Renard::Devops::Dictionary::repeat_count ]; do
 				cpanm -n Dist::Zilla && break;
 				n=\$((n+1));
 			done
@@ -610,15 +616,15 @@ EOF
 		my ($system, $repo) = @_;
 		$system->pre_install_dzil;
 		my $repo_path = $system->get_repo_path_cygwin($repo);
-		run_under_mingw( "cd $repo_path; " . _install_env() . $INSTALL_VIA_DZIL
-			. ( ! $repo->main_repo ? $INSTALL_CMD_VIA_DZIL : '' )  );
+		run_under_mingw( "cd $repo_path; " . _install_env() . $Renard::Devops::Dictionary::INSTALL_VIA_DZIL
+			. ( ! $repo->main_repo ? $Renard::Devops::Dictionary::INSTALL_CMD_VIA_DZIL : '' )  );
 	}
 
 	sub repo_install_via_cpanm {
 		my ($system, $repo) = @_;
 		my $repo_path = $system->get_repo_path_cygwin($repo);
-		run_under_mingw( "cd $repo_path; " . _install_env() . $INSTALL_VIA_CPANM
-			. ( ! $repo->main_repo ? $INSTALL_CMD_VIA_CPANM : '' )  );
+		run_under_mingw( "cd $repo_path; " . _install_env() . $Renard::Devops::Dictionary::INSTALL_VIA_CPANM
+			. ( ! $repo->main_repo ? $Renard::Devops::Dictionary::INSTALL_CMD_VIA_CPANM : '' )  );
 	}
 
 	sub repo_install_perl {
