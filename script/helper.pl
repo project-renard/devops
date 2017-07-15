@@ -341,9 +341,9 @@ EOF
 	sub repo_install_native {
 		my ($system, $repo) = @_;
 
-		my $deps = $repo->homebrew_packages_path;
+		my $deps = $repo->homebrew_get_packages;
 		say STDERR "Installing repo native deps";
-		system( qq{sed 's/#.*//' $deps | xargs brew install} );
+		system( qq{brew install @$deps} );
 	}
 
 	sub repo_install_perl {
@@ -582,11 +582,10 @@ EOF
 		my ($system, $repo) = @_;
 
 		# Native deps
-		my $deps_orig = $repo->msys2_mingw64_packages_path;
-		chomp(my $deps = `cygpath -u $deps_orig`);
+		my $deps = $repo->msys2_mingw64_get_packages;
 
 		run_under_mingw( <<"EOF" );
-			xargs pacman -S --needed --noconfirm < $deps;
+			xargs pacman -S --needed --noconfirm @$deps;
 EOF
 	}
 
@@ -702,6 +701,73 @@ package Renard::Devops::Repo {
 			my $m = Module::CPANfile->load($cpanfile_git_path);
 			$data = +{ map { $_->requirement->name => $_->requirement->options }
 				@{ $m->{_prereqs}->{prereqs} } }
+		}
+
+		return $data;
+	}
+
+	sub devops_config_path {
+		File::Spec->catfile( $_[0]->path, qw(maint devops.yml) );
+	}
+
+	sub devops_data {
+		my ($self) = @_;
+
+		eval{
+			require YAML::Tiny;
+		} or die "Could not load YAML::Tiny";
+
+		YAML::Tiny::LoadFile( $self->devops_config_path );
+	}
+
+	sub slurp_package_list_file {
+		my ($self, $file) = @_;
+
+		return [] unless -r $file;
+
+		open my $fh, '<', $file or die;
+		local $/ = undef;
+		my $data = <$fh>;
+		close $fh;
+		$data =~ s/#.*//;
+
+		my $package_list = [ split /\s+/, $data ];;
+	}
+
+	sub debian_get_packages {
+		my ($self) = @_;
+
+		my $data = [];
+		if( -r $self->devops_config_path ) {
+			push @$data, @{ $self->devops_data->{native}{debian}{packages} };
+		} elsif( -r $self->debian_packages_path ) {
+			push @$data, @{ $self->slurp_package_list_file( $self->debian_packages_path ) };
+		}
+
+		return $data;
+	}
+
+	sub homebrew_get_packages {
+		my ($self) = @_;
+
+		my $data = [];
+		if( -r $self->devops_config_path ) {
+			push @$data, @{ $self->devops_data->{native}{'macos-homebrew'}{packages} };
+		} elsif( -r $self->homebrew_packages_path ) {
+			push @$data, @{ $self->slurp_package_list_file( $self->homebrew_packages_path ) };
+		}
+
+		return $data;
+	}
+
+	sub msys2_mingw64_get_packages {
+		my ($self) = @_;
+
+		my $data = [];
+		if( -r $self->devops_config_path ) {
+			push @$data, @{ $self->devops_data->{native}{'msys2-mingw64'}{packages} };
+		} elsif( -r $self->msys2_mingw64_packages_path ) {
+			push @$data, @{ $self->slurp_package_list_file( $self->msys2_mingw64_packages_path ) };
 		}
 
 		return $data;
