@@ -27,6 +27,8 @@ our $RENARD_DEVOPS_HOOK_PRE_PERL = '';
 our $RENARD_DEVOPS_HOOK_PRE_PERL_RAN = 0;
 
 package Renard::Devops::Dictionary {
+	our @devops_script_perl_deps = qw(Module::CPANfile YAML::Tiny);
+
 	our $repeat_count = 1;
 
 	our $filter_grep = ''
@@ -329,7 +331,7 @@ EOF
 		push @INC, "$ENV{HOME}/perl5/lib/perl5";
 		require local::lib;
 		local::lib->setup_env_hash_for("$ENV{HOME}/perl5");
-		system(qw(cpanm Module::CPANfile));
+		system(qw(cpanm), @Renard::Devops::Dictionary::devops_script_perl_deps);
 		main::add_to_shell_script(<<'EOF');
 			eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib);
 			export ARCHFLAGS='-arch x86_64';
@@ -440,7 +442,7 @@ EOF
 			push @INC, "$ENV{HOME}/perl5/lib/perl5";
 			require local::lib;
 			local::lib->setup_env_hash_for("$ENV{HOME}/perl5");
-			system(q(cpanm Module::CPANfile));
+			system(qw(cpanm), @Renard::Devops::Dictionary::devops_script_perl_deps);
 			# Perl will be set up by Travis Perl helpers
 			main::add_to_shell_script( <<'EOF' );
 				eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib);
@@ -540,8 +542,8 @@ package Renard::Devops::Env::MSWin::MSYS2 {
   #SET "PATH=C:\%MSYS2_DIR%\%MSYSTEM%\bin;C:\%MSYS2_DIR%\usr\bin;%PATH%"
 
 		system(q{cpan App::cpanminus});
-		say STDERR 'Installing Module::CPANfile for the system Perl';
-		system(q|cpanm --notest Module::CPANfile|);
+		say STDERR 'Installing devops script deps for the system Perl';
+		system(qw(cpanm), @Renard::Devops::Dictionary::devops_script_perl_deps);
 
 		# Appveyor under MSYS2/MinGW64
 		run_under_mingw( <<EOF );
@@ -572,7 +574,7 @@ EOF
 			pl2bat `which pl2bat`;
 			yes | cpan App::cpanminus;
 			cpanm --notest ExtUtils::MakeMaker Module::Build;
-			cpanm --notest Module::CPANfile;
+			cpanm --notest @{[ @Renard::Devops::Dictionary::devops_script_perl_deps ]};
 EOF
 	}
 
