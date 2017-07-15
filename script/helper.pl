@@ -12,6 +12,29 @@ use Getopt::Long;
 use File::Spec;
 #use autodie;
 
+our $runner = Renard::Devops::Runner->new();
+package Renard::Devops::Runner {
+	sub new {
+		my ($class, %opt) = @_;
+
+		my $data = {};
+
+		$data->{_system} = [];
+
+		return bless $data, $class;
+	}
+
+	sub system {
+		my ($self, @rest) = @_;
+
+		my $return = system(@rest);
+		#my $return = 0;
+		push @{ $self->{_system} }, \@rest;
+
+		return $return;
+	}
+}
+
 package Renard::Devops::Conditional {
 	sub is_under_travis_ci { exists $ENV{TRAVIS_OS_NAME} && $ENV{TRAVIS_OS_NAME} }
 	sub is_under_travis_ci_osx { $ENV{TRAVIS_OS_NAME} eq 'osx' }
@@ -39,13 +62,13 @@ package Renard::Devops::Dictionary {
 		. q| -e '^Compilation failed in require'|;
 
 	our $INSTALL_CMD_VIA_CPANM = <<EOF;
-	cpanm --notest .;
+	command cpanm --notest .;
 EOF
 
 	our $INSTALL_VIA_CPANM = <<EOF;
 	n=0;
 	until [ \$n -ge $repeat_count ]; do
-		cpanm --notest --installdeps .
+		command cpanm --notest --installdeps .
 		n=\$((n+1));
 	done;
 EOF
@@ -56,7 +79,7 @@ EOF
 	n=0;
 	until [ \$n -ge $repeat_count ]; do
 		perl \$DZIL build --in build-dir;
-		cpanm --notest ./build-dir && break;
+		command cpanm --notest ./build-dir && break;
 	done;
 EOF
 
@@ -75,10 +98,27 @@ EOF
 	n=0;
 	until [ \$n -ge $repeat_count ]; do
 		perl \$DZIL listdeps | grep -v $filter_grep
-		perl \$DZIL listdeps | grep -v $filter_grep | cpanm -n && break;
+		perl \$DZIL listdeps | grep -v $filter_grep | command cpanm -n && break;
 		n=\$((n+1));
 	done
 EOF
+
+	sub pre_perl_local_lib {
+		say STDERR "Create a local::lib";
+		$main::runner->system(q(cpanm --local-lib=~/perl5 local::lib));
+		push @INC, "$ENV{HOME}/perl5/lib/perl5";
+		require local::lib;
+		local::lib->setup_env_hash_for("$ENV{HOME}/perl5");
+	}
+
+	sub pre_perl_local_lib_shell_eval {
+		return 'eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib)';
+	}
+
+	sub pre_perl_install_devops_deps {
+		$main::runner->system(qw(cpanm), @Renard::Devops::Dictionary::devops_script_perl_deps);
+	}
+
 }
 
 
@@ -197,7 +237,7 @@ sub clone_repo {
 	my $path = File::Spec->catfile('external', split(m|/|, $parts));
 
 	unless( -d $path ) {
-		system(qw(git clone),
+		$main::runner->system(qw(git clone),
 			qw(-b), $branch,
 			$url,
 			$path) == 0
@@ -308,12 +348,12 @@ package Renard::Devops::Env::MacOS::Homebrew {
 	sub pre_native {
 		my ($self) = @_;
 		say STDERR "Updating homebrew";
-		system(qw(brew update));
+		$main::runner->system(qw(brew update));
 
 		# Set up for X11 support
 		say STDERR "Installing xquartz homebrew cask for X11 support";
-		system(qw(brew tap Caskroom/cask));
-		system(qw(brew install Caskroom/cask/xquartz));
+		$main::runner->system(qw(brew tap Caskroom/cask));
+		$main::runner->system(qw(brew install Caskroom/cask/xquartz));
 
 		# Set up for libffi linking
 		unshift @PKG_CONFIG_PATH, '/usr/local/opt/libffi/lib/pkgconfig';
@@ -322,20 +362,18 @@ package Renard::Devops::Env::MacOS::Homebrew {
 EOF
 	}
 
-	sub pre_perl {
-		system(qw(brew install cpanm)) == 0
+	sub install_cpanm {
+		$main::runner->system(qw(brew install cpanm)) == 0
 			or die "Could not install cpanm";
+	}
 
-		say STDERR "Create a local::lib";
-		system(q(cpanm --local-lib=~/perl5 local::lib));
-		push @INC, "$ENV{HOME}/perl5/lib/perl5";
-		require local::lib;
-		local::lib->setup_env_hash_for("$ENV{HOME}/perl5");
-		system(qw(cpanm), @Renard::Devops::Dictionary::devops_script_perl_deps);
-		main::add_to_shell_script(<<'EOF');
-			eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib);
-			export ARCHFLAGS='-arch x86_64';
-EOF
+	sub pre_perl {
+		my ($self) = @_;
+
+		$self->install_cpanm;
+		Renard::Devops::Dictionary->pre_perl_install_devops_deps;
+		main::add_to_shell_script( Renard::Devops::Dictionary->pre_perl_local_lib_shell_eval );
+		main::add_to_shell_script( q|export ARCHFLAGS='-arch x86_64'| );
 	}
 
 	sub repo_install_native {
@@ -343,7 +381,7 @@ EOF
 
 		my $deps = $repo->homebrew_get_packages;
 		say STDERR "Installing repo native deps";
-		system( qq{brew install @$deps} );
+		$main::runner->system( qq{brew install @$deps} ) if @$deps;
 	}
 
 	sub repo_install_perl {
@@ -366,8 +404,8 @@ EOF
 				eval \$(perl -I ~/perl5/lib/perl5/ -Mlocal::lib);
 				if [ -r $dist_ini ]; then
 					command cpanm -n Moose~2.2005 Dist::Zilla;
-					dzil authordeps | command cpanm -n;
 					command cpanm -n Function::Parameters;
+					dzil authordeps | command cpanm -n;
 					dzil listdeps | grep -v @{[ $Renard::Devops::Dictionary::filter_grep ]} | command cpanm -n;
 				else
 					echo 'Installing deps';
@@ -397,14 +435,15 @@ EOF
 
 		my $dist_ini = File::Spec->catfile($repo->path, 'dist.ini');
 		my $repo_path = $repo->path;
+		$main::runner->system(q|command cpanm -n Function::Parameters|);
 		if( -r $dist_ini ) {
 			# Need to also install Moose so that we have the latest
 			# that can be used with Module::Runtime >= 0.014
-			system(q|cpanm -n Moose~2.2005 Dist::Zilla|);
-			system( "cd $repo_path; " . $Renard::Devops::Dictionary::INSTALL_VIA_DZIL
-				. ( ! $repo->main_repo ? $Renard::Devops::DictionaryINSTALL_CMD_VIA_DZIL : '' )  );
+			$main::runner->system(q|command cpanm -n Moose~2.2005 Dist::Zilla|);
+			$main::runner->system( "cd $repo_path; " . $Renard::Devops::Dictionary::INSTALL_VIA_DZIL
+				. ( ! $repo->main_repo ? $Renard::Devops::Dictionary::INSTALL_CMD_VIA_DZIL : '' )  );
 		} else {
-			system( "cd $repo_path; " . $Renard::Devops::Dictionary::INSTALL_VIA_CPANM
+			$main::runner->system( "cd $repo_path; " . $Renard::Devops::Dictionary::INSTALL_VIA_CPANM
 				. ( ! $repo->main_repo ? $Renard::Devops::Dictionary::INSTALL_CMD_VIA_CPANM : '' )  );
 		}
 	}
@@ -434,20 +473,22 @@ EOF
 		}
 	}
 
+	sub install_cpanm {
+		$main::runner->system(q(curl -L http://cpanmin.us | perl - --self-upgrade));
+		push @PATH, "$ENV{HOME}/perl5/bin";
+	}
+
 	sub pre_perl {
+		my ($self) = @_;
+
 		if( Renard::Devops::Conditional::is_under_travis_ci_linux() ) {
-			system(q(curl -L http://cpanmin.us | perl - --self-upgrade));
-			push @PATH, "$ENV{HOME}/perl5/bin";
-			system(q(cpanm --local-lib=~/perl5 local::lib));
-			push @INC, "$ENV{HOME}/perl5/lib/perl5";
-			require local::lib;
-			local::lib->setup_env_hash_for("$ENV{HOME}/perl5");
-			system(qw(cpanm), @Renard::Devops::Dictionary::devops_script_perl_deps);
+			$self->install_cpanm;
+			Renard::Devops::Dictionary->pre_perl_install_devops_deps;
+			$main::runner->system(qw(cpanm), @Renard::Devops::Dictionary::devops_script_perl_deps);
+
 			# Perl will be set up by Travis Perl helpers
-			main::add_to_shell_script( <<'EOF' );
-				eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib);
-				eval $(curl https://travis-perl.github.io/init) --auto;
-EOF
+			main::add_to_shell_script( Renard::Devops::Dictionary->pre_perl_local_lib_shell_eval );
+			main::add_to_shell_script( q|eval $(curl https://travis-perl.github.io/init) --auto| );
 			return;
 		}
 	}
@@ -496,11 +537,11 @@ EOF
 		my $dist_ini = File::Spec->catfile($repo->path, 'dist.ini');
 		my $repo_path = $repo->path;
 		if( -r $dist_ini ) {
-			system(q|cpanm -n Dist::Zilla|);
-			system( "cd $repo_path; " . $Renard::Devops::Dictionary::INSTALL_VIA_DZIL
-				. ( ! $repo->main_repo ? $Renard::Devops::DictionaryINSTALL_CMD_VIA_DZIL : '' )  );
+			$main::runner->system(q|cpanm -n Dist::Zilla|);
+			$main::runner->system( "cd $repo_path; " . $Renard::Devops::Dictionary::INSTALL_VIA_DZIL
+				. ( ! $repo->main_repo ? $Renard::Devops::Dictionary::INSTALL_CMD_VIA_DZIL : '' )  );
 		} else {
-			system( "cd $repo_path; " . $Renard::Devops::Dictionary::INSTALL_VIA_CPANM
+			$main::runner->system( "cd $repo_path; " . $Renard::Devops::Dictionary::INSTALL_VIA_CPANM
 				. ( ! $repo->main_repo ? $Renard::Devops::Dictionary::INSTALL_CMD_VIA_CPANM : '' )  );
 		}
 	}
@@ -521,7 +562,7 @@ package Renard::Devops::Env::MSWin::MSYS2 {
 		my ($cmd) = @_;
 		my $msystem_lc = lc $ENV{MSYSTEM};
 		local $ENV{PATH} = "C:\\$ENV{MSYS2_DIR}\\$msystem_lc\\bin;C:\\$ENV{MSYS2_DIR}\\usr\\bin;$ENV{PATH}";
-		return system( qw(bash -c), $cmd);
+		return $main::runner->system( qw(bash -c), $cmd);
 	}
 
 	sub pre_native {
@@ -541,9 +582,9 @@ package Renard::Devops::Env::MSWin::MSYS2 {
   #@echo on
   #SET "PATH=C:\%MSYS2_DIR%\%MSYSTEM%\bin;C:\%MSYS2_DIR%\usr\bin;%PATH%"
 
-		system(q{cpan App::cpanminus});
+		$main::runner->system(q{cpan App::cpanminus});
 		say STDERR 'Installing devops script deps for the system Perl';
-		system(qw(cpanm), @Renard::Devops::Dictionary::devops_script_perl_deps);
+		$main::runner->system(qw(cpanm), @Renard::Devops::Dictionary::devops_script_perl_deps);
 
 		# Appveyor under MSYS2/MinGW64
 		run_under_mingw( <<EOF );
