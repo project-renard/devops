@@ -371,6 +371,7 @@ EOF
 		my ($self) = @_;
 
 		$self->install_cpanm;
+		Renard::Devops::Dictionary->pre_perl_local_lib;
 		Renard::Devops::Dictionary->pre_perl_install_devops_deps;
 		main::add_to_shell_script( Renard::Devops::Dictionary->pre_perl_local_lib_shell_eval );
 		main::add_to_shell_script( q|export ARCHFLAGS='-arch x86_64'| );
@@ -483,8 +484,8 @@ EOF
 
 		if( Renard::Devops::Conditional::is_under_travis_ci_linux() ) {
 			$self->install_cpanm;
+			Renard::Devops::Dictionary->pre_perl_local_lib;
 			Renard::Devops::Dictionary->pre_perl_install_devops_deps;
-			$main::runner->system(qw(cpanm), @Renard::Devops::Dictionary::devops_script_perl_deps);
 
 			# Perl will be set up by Travis Perl helpers
 			main::add_to_shell_script( Renard::Devops::Dictionary->pre_perl_local_lib_shell_eval );
