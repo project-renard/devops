@@ -626,6 +626,10 @@ EOF
 		# Native deps
 		my $deps = $repo->msys2_mingw64_get_packages;
 
+		# Skip font cache generation (for fontconfig):
+		# <https://github.com/Alexpux/MINGW-packages/commit/fdea2f9>
+		# <https://github.com/Homebrew/homebrew-core/issues/10920>
+		local $ENV{MSYS2_FC_CACHE_SKIP} = 1;
 		run_under_mingw( <<"EOF" );
 			pacman -S --needed --noconfirm @$deps;
 EOF
