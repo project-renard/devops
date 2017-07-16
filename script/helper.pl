@@ -627,7 +627,7 @@ EOF
 		my $deps = $repo->msys2_mingw64_get_packages;
 
 		run_under_mingw( <<"EOF" );
-			xargs pacman -S --needed --noconfirm @$deps;
+			pacman -S --needed --noconfirm @$deps;
 EOF
 	}
 
