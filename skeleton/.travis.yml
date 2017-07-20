@@ -1,0 +1,37 @@
+language: perl
+cache:
+  directories:
+    # local::lib caching
+    - $HOME/perl5
+addons:
+  apt:
+    packages:
+      - libcairo2
+      - aspell     # for dzil Test::PodSpelling
+      - aspell-en  # for dzil Test::PodSpelling
+matrix:
+  include:
+    - perl: "5.16"
+      os: linux
+      dist: trusty
+      sudo: false
+    - perl: "5.18"
+      env: COVERAGE=1   # enables coverage+coveralls reporting
+      os: linux
+      dist: trusty
+      sudo: false
+    - perl: "5.20"
+      os: linux
+      dist: trusty
+      sudo: false
+    - perl: "blead"
+      os: linux
+      dist: trusty
+      sudo: false
+    - perl: "system"
+      os: osx
+  allow_failures:
+    - perl: blead       # ignore failures for blead perl
+before_install:
+  - export DEVOPS_BRANCH="master"
+  - eval "$(curl https://raw.githubusercontent.com/project-renard/devops/$DEVOPS_BRANCH/script/helper.pl | perl -- | awk '/^#START/,/^#END/ { print > "/dev/stdout"; next } { print > "/dev/stderr"}' )"
