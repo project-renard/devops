@@ -49,6 +49,8 @@ our $devops_dir = 'external/project-renard/devops';
 our $RENARD_DEVOPS_HOOK_PRE_PERL = '';
 our $RENARD_DEVOPS_HOOK_PRE_PERL_RAN = 0;
 
+our %REPO_URL_TO_REPO = ();
+
 package Renard::Devops::Dictionary {
 	our @devops_script_perl_deps = qw(Module::CPANfile YAML::Tiny);
 
@@ -220,6 +222,7 @@ sub stage_install {
 	for my $repos (@values) {
 		my $path = clone_repo( $repos->{git}, $repos->{branch} );
 		my $repo = Renard::Devops::Repo->new( path => $path );
+		$main::REPO_URL_TO_REPO{ $repos->{git} } = $repo;
 
 		stage_install($system, $repo);
 	}
@@ -236,14 +239,15 @@ sub clone_repo {
 	my ($parts) = $url =~ m,^https?://[^/]+/(.+?)(?:\.git)?$,;
 	my $path = File::Spec->catfile('external', split(m|/|, $parts));
 
-	unless( -d $path ) {
+	my $repo = $main::REPO_URL_TO_REPO{$url} // undef;
+	unless( defined $repo ) {
 		$main::runner->system(qw(git clone),
 			qw(-b), $branch,
 			$url,
 			$path) == 0
 		or die "Could not clone $url @ $branch";
 	} else {
-		chomp(my $branch_on_disk = `cd $path && git rev-parse --abbrev-ref HEAD`);
+		my $branch_on_disk = $repo->branch_name;
 		if( $branch_on_disk eq $branch ) {
 			say STDERR "Not cloning $url : already have branch $branch";
 		} else {
@@ -750,6 +754,20 @@ package Renard::Devops::Repo {
 		}
 
 		return $data;
+	}
+
+	sub commit_hash_of_head {
+		my ($self) = @_;
+		my $path = $self->path;
+		chomp(my $hash_on_disk = `cd $path && git rev-parse HEAD`);
+		$hash_on_disk;
+	}
+
+	sub branch_name {
+		my ($self) = @_;
+		my $path = $self->path;
+		chomp(my $branch_on_disk = `cd $path && git rev-parse --abbrev-ref HEAD`);
+		$branch_on_disk;
 	}
 
 	sub devops_config_path {
