@@ -189,7 +189,6 @@ sub main {
 	if( ! exists $ENV{RENARD_BUILD_DIR} ) {
 		$ENV{RENARD_BUILD_DIR} = File::Spec->rel2abs('.');
 	}
-	say STDERR "RENARD_BUILD_DIR = $ENV{RENARD_BUILD_DIR}";
 	$main::cpanfile_deps_log_dir = File::Spec->catfile( $ENV{RENARD_BUILD_DIR}, qw(maint cpanfile-git-log) );
 	$main::external_top_dir = File::Spec->catfile( $ENV{RENARD_BUILD_DIR}, $external_dir_name );
 	$main::devops_dir = File::Spec->catfile($external_top_dir, qw(project-renard devops));
@@ -460,7 +459,12 @@ EOF
 	sub repo_install_perl_dep {
 		my ($system, $repo) = @_;
 
-		return unless $repo->need_to_install;
+		say STDERR "Trying to install " . $repo->{_dist_name} . " @ " . $repo->commit_hash_of_head;
+
+		if( ! $repo->need_to_install) {
+			say STDERR $repo->{_dist_name} . " @ " . $repo->commit_hash_of_head . " already installed.";
+			return;
+		}
 		$main::runner->system($repo->uninstall_cmd_list);
 
 		my $dist_ini = File::Spec->catfile($repo->path, 'dist.ini');
@@ -567,7 +571,13 @@ EOF
 	sub repo_install_perl_dep {
 		my ($system, $repo) = @_;
 
-		return unless $repo->need_to_install;
+		say STDERR "Trying to install " . $repo->{_dist_name} . " @ " . $repo->commit_hash_of_head;
+
+		if( ! $repo->need_to_install) {
+			say STDERR $repo->{_dist_name} . " @ " . $repo->commit_hash_of_head . " already installed.";
+			return;
+		}
+
 		$main::runner->system($repo->uninstall_cmd_list);
 
 		my $dist_ini = File::Spec->catfile($repo->path, 'dist.ini');
@@ -722,7 +732,13 @@ EOF
 
 
 		if( ! $repo->main_repo ) {
-			return unless $repo->need_to_install;
+			say STDERR "Trying to install " . $repo->{_dist_name} . " @ " . $repo->commit_hash_of_head;
+
+			if( ! $repo->need_to_install) {
+				say STDERR $repo->{_dist_name} . " @ " . $repo->commit_hash_of_head . " already installed.";
+				return;
+			}
+
 			run_under_mingw( join(" ", $repo->uninstall_cmd_list) );
 		}
 
