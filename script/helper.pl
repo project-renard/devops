@@ -690,6 +690,7 @@ EOF
 	}
 
 	sub _install_env {
+		local $devops_dir = "external/project-renard/devops";
 		return <<EOF;
 			. \$APPVEYOR_BUILD_FOLDER/$devops_dir/script/mswin/EUMMnosearch.sh;
 			export MAKEFLAGS='-j4 -P4';
