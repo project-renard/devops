@@ -45,7 +45,9 @@ package Renard::Devops::Conditional {
 }
 
 our $shell_script_commands = '';
-our $devops_dir = 'external/project-renard/devops';
+our $external_dir_name = 'external';
+our $external_top_dir = File::Spec->rel2abs($external_dir_name);
+our $devops_dir = File::Spec->catfile($external_top_dir, qw(project-renard devops));
 our $RENARD_DEVOPS_HOOK_PRE_PERL = '';
 our $RENARD_DEVOPS_HOOK_PRE_PERL_RAN = 0;
 
@@ -120,7 +122,6 @@ EOF
 	sub pre_perl_install_devops_deps {
 		$main::runner->system(qw(cpanm), @Renard::Devops::Dictionary::devops_script_perl_deps);
 	}
-
 }
 
 
@@ -237,7 +238,7 @@ sub clone_repo {
 
 	say STDERR "Cloning $url @ [branch: $branch]";
 	my ($parts) = $url =~ m,^https?://[^/]+/(.+?)(?:\.git)?$,;
-	my $path = File::Spec->catfile('external', split(m|/|, $parts));
+	my $path = File::Spec->catfile($main::external_top_dir, split(m|/|, $parts));
 
 	my $repo = $main::REPO_URL_TO_REPO{$url} // undef;
 	unless( defined $repo ) {
@@ -694,14 +695,16 @@ EOF
 		}
 	}
 
+	sub cygpath {
+		my ($system, $path_orig) = @_;
+		chomp(my $path = `cygpath -u $path_orig`);
 
+		$path;
+	}
 
 	sub get_repo_path_cygwin {
 		my ($system, $repo) = @_;
-		my $repo_path_orig = $repo->path;
-		chomp(my $repo_path = `cygpath -u $repo_path_orig`);
-
-		$repo_path;
+		$system->cygpath($repo->path);
 	}
 
 	sub repo_test {
