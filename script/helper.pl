@@ -9,6 +9,7 @@ use warnings;
 
 use feature qw(say);
 use Getopt::Long;
+use File::Path qw(make_path);
 use File::Spec;
 #use autodie;
 
@@ -45,12 +46,19 @@ package Renard::Devops::Conditional {
 }
 
 our $shell_script_commands = '';
-our $devops_dir = 'external/project-renard/devops';
+our $external_dir_name = 'external';
 our $RENARD_DEVOPS_HOOK_PRE_PERL = '';
 our $RENARD_DEVOPS_HOOK_PRE_PERL_RAN = 0;
 
+our $external_top_dir;
+our $devops_dir;
+our $cpanfile_deps_log_dir;
+
+our %REPO_URL_TO_REPO = ();
+our $REPO_URL_TO_HASH = {};
+
 package Renard::Devops::Dictionary {
-	our @devops_script_perl_deps = qw(Module::CPANfile YAML::Tiny);
+	our @devops_script_perl_deps = qw(Module::CPANfile YAML::Tiny App::pmuninstall);
 
 	our $repeat_count = 1;
 
@@ -118,7 +126,6 @@ EOF
 	sub pre_perl_install_devops_deps {
 		$main::runner->system(qw(cpanm), @Renard::Devops::Dictionary::devops_script_perl_deps);
 	}
-
 }
 
 
@@ -171,12 +178,20 @@ sub main {
 
 	my $current_repo = Renard::Devops::Repo->new(
 		path => File::Spec->rel2abs('.'),
+		( dist_name => $ARGV[1] ) x !!( $mode eq 'install-perl-dep' ),
 		main_repo => ( $mode ne 'install-perl-dep' ) , );
 
 	$RENARD_DEVOPS_HOOK_PRE_PERL = $ENV{RENARD_DEVOPS_HOOK_PRE_PERL};
 	if( $RENARD_DEVOPS_HOOK_PRE_PERL && $RENARD_DEVOPS_HOOK_PRE_PERL !~ /;\s*$/ ) {
 		$RENARD_DEVOPS_HOOK_PRE_PERL .= ';';
 	}
+
+	if( ! exists $ENV{RENARD_BUILD_DIR} ) {
+		$ENV{RENARD_BUILD_DIR} = File::Spec->rel2abs('.');
+	}
+	$main::cpanfile_deps_log_dir = File::Spec->catfile( $ENV{RENARD_BUILD_DIR}, qw(maint cpanfile-git-log) );
+	$main::external_top_dir = File::Spec->catfile( $ENV{RENARD_BUILD_DIR}, $external_dir_name );
+	$main::devops_dir = File::Spec->catfile($external_top_dir, qw(project-renard devops));
 
 	my $system = get_system();
 	if( $mode eq 'auto' || $mode eq 'install' ) {
@@ -207,19 +222,27 @@ sub stage_before_install {
 		export RENARD_TEST_DATA_PATH='external/project-renard/test-data';
 		export RENARD_SCRIPT_BASE='external/project-renard/devops/script';
 EOF
+	main::add_to_shell_script( qq|export RENARD_BUILD_DIR='$ENV{RENARD_BUILD_DIR}';|   );
+
 
 	$system->pre_native;
 	$system->pre_perl;
+	make_path($main::cpanfile_deps_log_dir);
 }
 
 sub stage_install {
 	my ($system, $current_repo) = @_;
 
 	my $deps = $current_repo->cpanfile_git_data;
-	my @values = values %$deps;
-	for my $repos (@values) {
+	my @keys = keys %$deps;
+	for my $module_name (@keys) {
+		my $repos = $deps->{$module_name};
 		my $path = clone_repo( $repos->{git}, $repos->{branch} );
-		my $repo = Renard::Devops::Repo->new( path => $path );
+		my $repo = Renard::Devops::Repo->new(
+			path => $path,
+			dist_name => $module_name,
+		);
+		$main::REPO_URL_TO_REPO{ $repos->{git} } = $repo;
 
 		stage_install($system, $repo);
 	}
@@ -234,16 +257,17 @@ sub clone_repo {
 
 	say STDERR "Cloning $url @ [branch: $branch]";
 	my ($parts) = $url =~ m,^https?://[^/]+/(.+?)(?:\.git)?$,;
-	my $path = File::Spec->catfile('external', split(m|/|, $parts));
+	my $path = File::Spec->catfile($main::external_top_dir, split(m|/|, $parts));
 
-	unless( -d $path ) {
+	my $repo = $main::REPO_URL_TO_REPO{$url} // undef;
+	unless( defined $repo ) {
 		$main::runner->system(qw(git clone),
 			qw(-b), $branch,
 			$url,
 			$path) == 0
 		or die "Could not clone $url @ $branch";
 	} else {
-		chomp(my $branch_on_disk = `cd $path && git rev-parse --abbrev-ref HEAD`);
+		my $branch_on_disk = $repo->branch_name;
 		if( $branch_on_disk eq $branch ) {
 			say STDERR "Not cloning $url : already have branch $branch";
 		} else {
@@ -425,14 +449,23 @@ EOF
 		} else {
 			my $helper_script = File::Spec->rel2abs(File::Spec->catfile($devops_dir, qw(script helper.pl)));
 			my $repo_path = $repo->path;
+			my $module_name = $repo->{_dist_name};
 			main::add_to_shell_script( <<EOF );
-				( cd $repo_path; perl $helper_script install-perl-dep );
+				( cd $repo_path; perl $helper_script install-perl-dep $module_name );
 EOF
 		}
 	}
 
 	sub repo_install_perl_dep {
 		my ($system, $repo) = @_;
+
+		say STDERR "Trying to install " . $repo->{_dist_name} . " @ " . $repo->commit_hash_of_head;
+
+		if( ! $repo->need_to_install) {
+			say STDERR $repo->{_dist_name} . " @ " . $repo->commit_hash_of_head . " already installed.";
+			return;
+		}
+		$main::runner->system($repo->uninstall_cmd_list);
 
 		my $dist_ini = File::Spec->catfile($repo->path, 'dist.ini');
 		my $repo_path = $repo->path;
@@ -447,6 +480,8 @@ EOF
 			$main::runner->system( "cd $repo_path; " . $Renard::Devops::Dictionary::INSTALL_VIA_CPANM
 				. ( ! $repo->main_repo ? $Renard::Devops::Dictionary::INSTALL_CMD_VIA_CPANM : '' )  );
 		}
+
+		$repo->save_commit_hash_to_config;
 	}
 
 	sub repo_test {
@@ -526,14 +561,24 @@ EOF
 		} else {
 			my $helper_script = File::Spec->rel2abs(File::Spec->catfile($devops_dir, qw(script helper.pl)));
 			my $repo_path = $repo->path;
+			my $module_name = $repo->{_dist_name};
 			main::add_to_shell_script( <<EOF );
-				( cd $repo_path; perl $helper_script install-perl-dep );
+				( cd $repo_path; perl $helper_script install-perl-dep $module_name );
 EOF
 		}
 	}
 
 	sub repo_install_perl_dep {
 		my ($system, $repo) = @_;
+
+		say STDERR "Trying to install " . $repo->{_dist_name} . " @ " . $repo->commit_hash_of_head;
+
+		if( ! $repo->need_to_install) {
+			say STDERR $repo->{_dist_name} . " @ " . $repo->commit_hash_of_head . " already installed.";
+			return;
+		}
+
+		$main::runner->system($repo->uninstall_cmd_list);
 
 		my $dist_ini = File::Spec->catfile($repo->path, 'dist.ini');
 		my $repo_path = $repo->path;
@@ -545,6 +590,8 @@ EOF
 			$main::runner->system( "cd $repo_path; " . $Renard::Devops::Dictionary::INSTALL_VIA_CPANM
 				. ( ! $repo->main_repo ? $Renard::Devops::Dictionary::INSTALL_CMD_VIA_CPANM : '' )  );
 		}
+
+		$repo->save_commit_hash_to_config;
 	}
 
 
@@ -653,6 +700,7 @@ EOF
 	}
 
 	sub _install_env {
+		local $devops_dir = "external/project-renard/devops";
 		return <<EOF;
 			. \$APPVEYOR_BUILD_FOLDER/$devops_dir/script/mswin/EUMMnosearch.sh;
 			export MAKEFLAGS='-j4 -P4';
@@ -682,22 +730,40 @@ EOF
 			$RENARD_DEVOPS_HOOK_PRE_PERL_RAN = 1;
 		}
 
+
+		if( ! $repo->main_repo ) {
+			say STDERR "Trying to install " . $repo->{_dist_name} . " @ " . $repo->commit_hash_of_head;
+
+			if( ! $repo->need_to_install) {
+				say STDERR $repo->{_dist_name} . " @ " . $repo->commit_hash_of_head . " already installed.";
+				return;
+			}
+
+			run_under_mingw( join(" ", $repo->uninstall_cmd_list) );
+		}
+
 		my $dist_ini = File::Spec->catfile($repo->path, 'dist.ini');
 		if( -r $dist_ini ) {
 			$system->repo_install_via_dzil($repo);
 		} else {
 			$system->repo_install_via_cpanm($repo);
 		}
+
+		if( ! $repo->main_repo ) {
+			$repo->save_commit_hash_to_config;
+		}
 	}
 
+	sub cygpath {
+		my ($system, $path_orig) = @_;
+		chomp(my $path = `cygpath -u $path_orig`);
 
+		$path;
+	}
 
 	sub get_repo_path_cygwin {
 		my ($system, $repo) = @_;
-		my $repo_path_orig = $repo->path;
-		chomp(my $repo_path = `cygpath -u $repo_path_orig`);
-
-		$repo_path;
+		$system->cygpath($repo->path);
 	}
 
 	sub repo_test {
@@ -716,6 +782,8 @@ EOF
 }
 
 package Renard::Devops::Repo {
+	use File::Path qw(make_path);
+
 	sub new {
 		my ($class, %opt) = @_;
 
@@ -725,6 +793,8 @@ package Renard::Devops::Repo {
 
 		die "Path $data->{_path} is not readable directory"
 			unless -d $data->{_path} and -r $data->{_path};
+
+		$data->{_dist_name} = $opt{dist_name} if exists $opt{dist_name};
 
 		# need to indicate if this is the main repo
 		$data->{_main_repo} = $opt{main_repo} // 0;
@@ -752,6 +822,47 @@ package Renard::Devops::Repo {
 		return $data;
 	}
 
+	sub uninstall_cmd_list {
+		my ($self) = @_;
+		if( exists $self->{_dist_name} ) {
+			return ( qw(pm-uninstall -vfn), $self->{_dist_name} );
+		}
+	}
+
+	sub need_to_install {
+		my ($self) = @_;
+		return $self->get_commit_hash_from_config ne $self->commit_hash_of_head;
+	}
+
+	sub get_commit_hash_from_config {
+		my ($self) = @_;
+		my $data = $self->read_config;
+		return $data->{commit} // '';
+	}
+
+	sub save_commit_hash_to_config {
+		my ($self) = @_;
+		my $data = $self->read_config;
+
+		$data->{commit} = $self->commit_hash_of_head;
+
+		$self->write_config( $data );
+	}
+
+	sub commit_hash_of_head {
+		my ($self) = @_;
+		my $path = $self->path;
+		chomp(my $hash_on_disk = `cd $path && git rev-parse HEAD`);
+		$hash_on_disk;
+	}
+
+	sub branch_name {
+		my ($self) = @_;
+		my $path = $self->path;
+		chomp(my $branch_on_disk = `cd $path && git rev-parse --abbrev-ref HEAD`);
+		$branch_on_disk;
+	}
+
 	sub devops_config_path {
 		File::Spec->catfile( $_[0]->path, qw(maint devops.yml) );
 	}
@@ -764,6 +875,47 @@ package Renard::Devops::Repo {
 		} or die "Could not load YAML::Tiny";
 
 		YAML::Tiny::LoadFile( $self->devops_config_path );
+	}
+
+	sub maint_config_repo_top_dir {
+		my ($self) = @_;
+		my $dir = File::Spec->catfile(
+			$main::cpanfile_deps_log_dir,
+			File::Spec->abs2rel( $self->path, $main::external_top_dir ) );
+		if( ! -d $dir ) {
+			make_path( $dir );
+		}
+
+		$dir;
+	}
+
+	sub maint_config_yml_path {
+		my ($self) = @_;
+		File::Spec->catfile( $self->maint_config_repo_top_dir, 'config.yml' );
+	}
+
+	sub read_config {
+		my ($self) = @_;
+
+		eval{
+			require YAML::Tiny;
+		} or die "Could not load YAML::Tiny";
+
+		if ( ! -f $self->maint_config_yml_path ) {
+			return {};
+		}
+
+		YAML::Tiny::LoadFile( $self->maint_config_yml_path );
+	}
+
+	sub write_config {
+		my ($self, $data) = @_;
+
+		eval{
+			require YAML::Tiny;
+		} or die "Could not load YAML::Tiny";
+
+		YAML::Tiny::DumpFile( $self->maint_config_yml_path, $data );
 	}
 
 	sub slurp_package_list_file {
