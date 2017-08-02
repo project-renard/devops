@@ -442,6 +442,9 @@ EOF
 			function make {
 				export TEST_JOBS=4;
 				if [ "\$#" == 1 ] && [ "\$1" == "test" ]; then
+					if [ -f Makefile.PL ]; then
+						command perl Makefile.PL;
+					fi
 					command make;
 					local blib;
 					if [ "\$(find blib/arch/ -type f ! -empty)" == "" ]; then
