@@ -524,7 +524,7 @@ EOF
 
 			# Perl will be set up by Travis Perl helpers
 			main::add_to_shell_script( Renard::Devops::Dictionary->pre_perl_local_lib_shell_eval );
-			main::add_to_shell_script( q|eval $(curl https://travis-perl.github.io/init) --auto| );
+			main::add_to_shell_script( q|eval $(curl https://travis-perl.github.io/init) --auto --always-upgrade-modules| );
 			return;
 		}
 	}
