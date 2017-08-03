@@ -661,7 +661,7 @@ EOF
 
 		# build tools
 		run_under_mingw( <<'EOF' );
-			pacman -S --needed --noconfirm mingw-w64-x86_64-toolchain autoconf automake libtool make patch mingw-w64-x86_64-libtool
+			pacman -S --needed --noconfirm mingw-w64-x86_64-toolchain autoconf automake libtool make patch mingw-w64-x86_64-libtool help2man
 EOF
 
 		# There is not a corresponding cc for the mingw64 gcc. So we copy it in place.
