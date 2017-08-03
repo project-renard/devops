@@ -432,6 +432,8 @@ EOF
 					command cpanm -n Function::Parameters;
 					dzil authordeps | command cpanm -n;
 					dzil listdeps | grep -v @{[ $Renard::Devops::Dictionary::filter_grep ]} | command cpanm -n;
+					dzil build --in build-dir;
+					cd build-dir;
 				else
 					echo 'Installing deps';
 					command cpanm -n Function::Parameters;
@@ -442,7 +444,19 @@ EOF
 			function make {
 				export TEST_JOBS=4;
 				if [ "\$#" == 1 ] && [ "\$1" == "test" ]; then
-					prove -j\${TEST_JOBS} -lvr t;
+					if [ -f Makefile.PL ]; then
+						command perl Makefile.PL;
+					fi
+					command make;
+					local blib;
+					if [ "\$(find blib/arch/ -type f ! -empty)" == "" ]; then
+						blib="-l";
+					else
+						blib="-b";
+					fi;
+					prove \$blib -j\${TEST_JOBS} -vr t;
+				else
+					command make "\$@";
 				fi;
 			};
 EOF
