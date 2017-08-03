@@ -6,7 +6,7 @@ main() {
 
 	export RENARD_TEST_DATA_PATH=$(_repo_dir "test-data")
 	export RENARD_SCRIPT_BASE=$(_repo_dir "devops")/script
-	if which got-perl5lib >/dev/null; then eval "$(got-perl5lib -t renard -T alien)"; fi
+	#if which got-perl5lib >/dev/null; then eval "$(got-perl5lib -t renard -T alien)"; fi
 }
 
 _repo_dir () {
