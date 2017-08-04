@@ -806,7 +806,7 @@ EOF
 				command perl Makefile.PL;
 			fi
 			command dmake;
-			local blib;
+			blib='-l';
 			if find blib/arch/ -type f ! -empty | grep -q ^; then
 				blib='-b';
 			else
