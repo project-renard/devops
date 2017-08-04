@@ -791,18 +791,21 @@ EOF
 			. external/project-renard/devops/ENV.sh;
 			if [ -f dist.ini ]; then
 				export DZIL=\$(which dzil);
-				perl \$DZIL test -v -j\${TEST_JOBS};
-			elsif [ -f Makefile.PL ]; then
+				perl \$DZIL build --in build-dir;
+				cd build-dir;
+			fi;
+
+			if [ -f Makefile.PL ]; then
 				command perl Makefile.PL;
-				command dmake;
-				local blib;
-				if [ "\$(find blib/arch/ -type f ! -empty)" == "" ]; then
-					blib="-l";
-				else
-					blib="-b";
-				fi;
-				prove \$blib -j\${TEST_JOBS} -vr t;
 			fi
+			command dmake;
+			local blib;
+			if [ "\$(find blib/arch/ -type f ! -empty)" == "" ]; then
+				blib="-l";
+			else
+				blib="-b";
+			fi;
+			prove \$blib -j\${TEST_JOBS} -vr t;
 EOF
 		exit 1 if $ret != 0;
 	}
