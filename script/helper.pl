@@ -807,10 +807,10 @@ EOF
 			fi
 			command dmake;
 			local blib;
-			if [ "\$(find blib/arch/ -type f ! -empty)" == "" ]; then
-				blib="-l";
+			if find blib/arch/ -type f ! -empty | grep -q ^; then
+				blib='-b';
 			else
-				blib="-b";
+				blib='-l';
 			fi;
 			prove \$blib -j\${TEST_JOBS} -vr t;
 EOF
