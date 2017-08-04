@@ -789,7 +789,20 @@ EOF
 
 			export TEST_JOBS=4;
 			. external/project-renard/devops/ENV.sh;
-			prove -j\${TEST_JOBS} -lvr t;
+			if [ -f dist.ini ]; then
+				export DZIL=\$(which dzil);
+				perl \$DZIL test -v -j\${TEST_JOBS};
+			elsif [ -f Makefile.PL ]; then
+				command perl Makefile.PL;
+				command dmake;
+				local blib;
+				if [ "\$(find blib/arch/ -type f ! -empty)" == "" ]; then
+					blib="-l";
+				else
+					blib="-b";
+				fi;
+				prove \$blib -j\${TEST_JOBS} -vr t;
+			fi
 EOF
 		exit 1 if $ret != 0;
 	}
