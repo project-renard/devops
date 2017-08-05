@@ -58,7 +58,7 @@ our %REPO_URL_TO_REPO = ();
 our $REPO_URL_TO_HASH = {};
 
 package Renard::Devops::Dictionary {
-	our @devops_script_perl_deps = qw(Module::CPANfile YAML::Tiny App::pmuninstall);
+	our @devops_script_perl_deps = qw(Module::CPANfile YAML::Tiny);
 
 	our $repeat_count = 1;
 
@@ -121,6 +121,10 @@ EOF
 
 	sub pre_perl_local_lib_shell_eval {
 		return 'eval $(perl -I ~/perl5/lib/perl5/ -Mlocal::lib)';
+	}
+
+	sub pre_perl_install_module_build_deps {
+		$main::runner->system(qw(cpanm --notest ExtUtils::MakeMaker Module::Build App::pmuninstall));
 	}
 
 	sub pre_perl_install_devops_deps {
@@ -396,7 +400,9 @@ EOF
 
 		$self->install_cpanm;
 		Renard::Devops::Dictionary->pre_perl_local_lib;
+		Renard::Devops::Dictionary->pre_perl_install_module_build_deps;
 		Renard::Devops::Dictionary->pre_perl_install_devops_deps;
+
 		main::add_to_shell_script( Renard::Devops::Dictionary->pre_perl_local_lib_shell_eval );
 		main::add_to_shell_script( q|export ARCHFLAGS='-arch x86_64'| );
 	}
@@ -534,6 +540,7 @@ EOF
 		if( Renard::Devops::Conditional::is_under_travis_ci_linux() ) {
 			$self->install_cpanm;
 			Renard::Devops::Dictionary->pre_perl_local_lib;
+			Renard::Devops::Dictionary->pre_perl_install_module_build_deps;
 			Renard::Devops::Dictionary->pre_perl_install_devops_deps;
 
 			# Perl will be set up by Travis Perl helpers
@@ -661,7 +668,7 @@ EOF
 
 		# build tools
 		run_under_mingw( <<'EOF' );
-			pacman -S --needed --noconfirm mingw-w64-x86_64-toolchain autoconf automake libtool make patch mingw-w64-x86_64-libtool help2man
+			pacman -S --needed --noconfirm mingw-w64-x86_64-toolchain autoconf automake libtool make patch mingw-w64-x86_64-libtool
 EOF
 
 		# There is not a corresponding cc for the mingw64 gcc. So we copy it in place.
@@ -676,7 +683,7 @@ EOF
 			perl -V;
 			pl2bat `which pl2bat`;
 			yes | cpan App::cpanminus;
-			cpanm --notest ExtUtils::MakeMaker Module::Build;
+			cpanm --notest ExtUtils::MakeMaker Module::Build App::pmuninstall;
 			cpanm --notest @{[ @Renard::Devops::Dictionary::devops_script_perl_deps ]};
 EOF
 	}
@@ -789,7 +796,23 @@ EOF
 
 			export TEST_JOBS=4;
 			. external/project-renard/devops/ENV.sh;
-			prove -j\${TEST_JOBS} -lvr t;
+			if [ -f dist.ini ]; then
+				export DZIL=\$(which dzil);
+				perl \$DZIL build --in build-dir;
+				cd build-dir;
+			fi;
+
+			if [ -f Makefile.PL ]; then
+				command perl Makefile.PL;
+			fi
+			command dmake;
+			blib='-l';
+			if find blib/arch/ -type f ! -empty | grep -q ^; then
+				blib='-b';
+			else
+				blib='-l';
+			fi;
+			prove \$blib -j\${TEST_JOBS} -vr t;
 EOF
 		exit 1 if $ret != 0;
 	}

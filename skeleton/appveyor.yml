@@ -7,6 +7,8 @@ cache:
   - C:\msys64\mingw64\bin\dzil -> appveyor.yml
   - C:\msys64\home\%Username%\perl5 -> appveyor.yml
   - maint/cpanfile-git-log -> appveyor.yml
+  # cache for devops helper.pl
+  - C:\Perl\site -> appveyor.yml
 
 environment:
   matrix:
