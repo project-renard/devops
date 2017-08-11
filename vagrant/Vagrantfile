@@ -38,7 +38,7 @@ privkey = create_and_add_ssh_key()
 def add_synced_folders( config, org_toplevel, options = {} )
 	for project_dir in %w[curie test-data devops release homebrew-project-renard travis-homebrew-bottle
 				p5-Alien-MuPDF p5-Renard-Incunabula-MuPDF-mutool
-				p5-Alien-pdf2htmlEX p5-Alien-Poppler p5-Alien-OpenJPEG
+				p5-Alien-pdf2htmlEX p5-Alien-Poppler p5-Alien-OpenJPEG p5-Alien-FontForge
 				p5-Renard-Incunabula
 				p5-Renard-Incunabula-Format-PDF
 				p5-Renard-Incunabula-Frontend-Gtk3
