@@ -412,7 +412,12 @@ EOF
 
 		my $deps = $repo->homebrew_get_packages;
 		say STDERR "Installing repo native deps";
-		$main::runner->system( qq{brew install @$deps} ) if @$deps;
+		if( @$deps ) {
+			# Skip font cache generation (for fontconfig):
+			# <https://github.com/Homebrew/homebrew-core/pull/10947#issuecomment-285946088>
+			my $has_fontconfig_dep = $main::runner->system( qq{brew deps --union @$deps | grep ^fontconfig\$ && brew install --force-bottle --build-bottle fontconfig} );
+			$main::runner->system( qq{brew install @$deps} );
+		}
 	}
 
 	sub repo_install_perl {
