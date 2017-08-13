@@ -371,7 +371,7 @@ END
 
 
 package Renard::Devops::Env::MacOS::Homebrew {
-	use Env qw(@PKG_CONFIG_PATH);
+	use Env qw(@PKG_CONFIG_PATH @PATH);
 
 	sub pre_native {
 		my ($self) = @_;
@@ -385,8 +385,11 @@ package Renard::Devops::Env::MacOS::Homebrew {
 
 		# Set up for libffi linking
 		unshift @PKG_CONFIG_PATH, '/usr/local/opt/libffi/lib/pkgconfig';
+		# Add Homebrew gettext utilities to path
+		unshift @PATH, '/usr/local/opt/gettext/bin';
 		main::add_to_shell_script( <<EOF );
 			export PKG_CONFIG_PATH='$ENV{PKG_CONFIG_PATH}';
+			export PATH='$ENV{PATH}';
 EOF
 	}
 
