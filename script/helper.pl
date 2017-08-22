@@ -195,9 +195,13 @@ sub main {
 		$ENV{RENARD_BUILD_DIR} = File::Spec->rel2abs('.');
 	}
 	$main::cpanfile_deps_log_dir = File::Spec->catfile( $ENV{RENARD_BUILD_DIR}, qw(maint cpanfile-git-log) );
-	$main::external_top_dir = Cwd::realpath(
-			File::Spec->catfile( $ENV{RENARD_BUILD_DIR}, '..', $external_dir_name )
-		);
+
+	my $external_dir = File::Spec->catfile( $ENV{RENARD_BUILD_DIR}, '..', $external_dir_name );
+	if( ! -d $external_dir ) {
+		make_path($external_dir);
+	}
+	$main::external_top_dir = Cwd::realpath( $external_dir );
+
 	$main::devops_dir = File::Spec->catfile($external_top_dir, qw(project-renard devops));
 
 	my $system = get_system();
