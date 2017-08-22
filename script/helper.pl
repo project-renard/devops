@@ -803,7 +803,7 @@ EOF
 			cd $repo_path;
 
 			export TEST_JOBS=4;
-			. external/project-renard/devops/ENV.sh;
+			. \$APPVEYOR_BUILD_FOLDER/../external/project-renard/devops/ENV.sh;
 			if [ -f dist.ini ]; then
 				export DZIL=\$(which dzil);
 				perl \$DZIL build --in build-dir;
