@@ -11,6 +11,7 @@ use feature qw(say);
 use Getopt::Long;
 use File::Path qw(make_path);
 use File::Spec;
+use Cwd;
 #use autodie;
 
 our $runner = Renard::Devops::Runner->new();
@@ -194,7 +195,9 @@ sub main {
 		$ENV{RENARD_BUILD_DIR} = File::Spec->rel2abs('.');
 	}
 	$main::cpanfile_deps_log_dir = File::Spec->catfile( $ENV{RENARD_BUILD_DIR}, qw(maint cpanfile-git-log) );
-	$main::external_top_dir = File::Spec->catfile( $ENV{RENARD_BUILD_DIR}, '..', $external_dir_name );
+	$main::external_top_dir = Cwd::realpath(
+			File::Spec->catfile( $ENV{RENARD_BUILD_DIR}, '..', $external_dir_name )
+		);
 	$main::devops_dir = File::Spec->catfile($external_top_dir, qw(project-renard devops));
 
 	my $system = get_system();
