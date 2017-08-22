@@ -194,7 +194,7 @@ sub main {
 		$ENV{RENARD_BUILD_DIR} = File::Spec->rel2abs('.');
 	}
 	$main::cpanfile_deps_log_dir = File::Spec->catfile( $ENV{RENARD_BUILD_DIR}, qw(maint cpanfile-git-log) );
-	$main::external_top_dir = File::Spec->catfile( $ENV{RENARD_BUILD_DIR}, $external_dir_name );
+	$main::external_top_dir = File::Spec->catfile( $ENV{RENARD_BUILD_DIR}, '..', $external_dir_name );
 	$main::devops_dir = File::Spec->catfile($external_top_dir, qw(project-renard devops));
 
 	my $system = get_system();
@@ -223,8 +223,8 @@ sub stage_before_install {
 
 	get_aux_repo($current_repo);
 	main::add_to_shell_script( <<'EOF' );
-		export RENARD_TEST_DATA_PATH='external/project-renard/test-data';
-		export RENARD_SCRIPT_BASE='external/project-renard/devops/script';
+		export RENARD_TEST_DATA_PATH=$(cd '../external/project-renard/test-data' && pwd);
+		export RENARD_SCRIPT_BASE=$(cd '../external/project-renard/devops/script' && pwd);
 EOF
 	main::add_to_shell_script( qq|export RENARD_BUILD_DIR='$ENV{RENARD_BUILD_DIR}';|   );
 
@@ -292,7 +292,7 @@ sub get_aux_repo {
 	my ($current_repo) = @_;
 
 	for my $repo (qw(devops test-data)) {
-		unless( -d "external/project-renard/$repo" ) {
+		unless( -d "../external/project-renard/$repo" ) {
 			say STDERR "Cloning $repo";
 			clone_repo("https://github.com/project-renard/$repo.git");
 		}
@@ -729,7 +729,7 @@ EOF
 	}
 
 	sub _install_env {
-		local $devops_dir = "external/project-renard/devops";
+		local $devops_dir = "../external/project-renard/devops";
 		return <<EOF;
 			. \$APPVEYOR_BUILD_FOLDER/$devops_dir/script/mswin/EUMMnosearch.sh;
 			export MAKEFLAGS='-j4 -P4';
