@@ -30,6 +30,7 @@ package Renard::Devops::Runner {
 		my ($self, @rest) = @_;
 
 		my $return = system(@rest);
+		die "non-zero exit for system: @rest" if $return != 0;
 		#my $return = 0;
 		push @{ $self->{_system} }, \@rest;
 
