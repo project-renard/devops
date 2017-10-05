@@ -710,6 +710,8 @@ EOF
 		# Native deps
 		my $deps = $repo->msys2_mingw64_get_packages;
 
+		return unless @$deps;
+
 		# Skip font cache generation (for fontconfig):
 		# <https://github.com/Alexpux/MINGW-packages/commit/fdea2f9>
 		# <https://github.com/Homebrew/homebrew-core/issues/10920>
