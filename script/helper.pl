@@ -426,7 +426,9 @@ EOF
 		if( @$deps ) {
 			# Skip font cache generation (for fontconfig):
 			# <https://github.com/Homebrew/homebrew-core/pull/10947#issuecomment-285946088>
-			my $has_fontconfig_dep = $main::runner->system( qq{brew deps --union @$deps | grep ^fontconfig\$ && brew install --force-bottle --build-bottle fontconfig} );
+			my $has_fontconfig_dep = eval {
+				$main::runner->system( qq{brew deps --union @$deps | grep ^fontconfig\$ && brew install --force-bottle --build-bottle fontconfig} );
+			};
 			$main::runner->system( qq{brew install @$deps} );
 		}
 	}
