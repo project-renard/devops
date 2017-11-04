@@ -429,7 +429,14 @@ EOF
 			my $has_fontconfig_dep = eval {
 				$main::runner->system( qq{brew deps --union @$deps | grep ^fontconfig\$ && brew install --force-bottle --build-bottle fontconfig} );
 			};
-			$main::runner->system( qq{brew install @$deps} );
+			my @deps_to_install = grep {
+				my $dep = $_;
+				0 != eval {
+					$main::runner->system( qq{brew ls $dep >/dev/null 2>&1} );
+				};
+			} @$deps;
+			say STDERR "Native deps to install: @deps_to_install";
+			$main::runner->system( qq{brew install @deps_to_install} ) if @deps_to_install;
 		}
 	}
 
