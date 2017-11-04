@@ -477,6 +477,7 @@ EOF
 				if [ "\$#" == 1 ] && [ "\$1" == "test" ]; then
 					if [ -f Makefile.PL ]; then
 						command perl Makefile.PL;
+						command cpanm --notest --installdeps .;
 					fi
 					command make;
 					local blib;
