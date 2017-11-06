@@ -5,7 +5,7 @@ def debian_shell_provision( config, org_toplevel )
 	if( File.exists?(File.join(org_toplevel, 'devops', 'devops')) )
 		prefix = '~/project-renard/devops/devops/script'
 	end
-	config.vm.provision "shell", privileged: false, inline: "perl #{prefix}/helper.pl vagrant"
+	config.vm.provision "shell", privileged: false, inline: "cd ~/project-renard; perl #{prefix}/helper.pl vagrant"
 end
 
 def create_and_add_ssh_key()
