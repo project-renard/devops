@@ -1,0 +1,5 @@
+#!/bin/sh
+
+
+sudo apt-get install vagrant ruby-dev sshpass
+#vagrant plugin install vagrant-sshfs
