@@ -52,13 +52,13 @@ def add_synced_folders( config, org_toplevel, options = {} )
 			guest_dir = "#{top}/#{guest_dir_rel}"
 			config.vm.provision :shell, privileged: false,
 				run: "always",
-				inline: <<SHELL
-# if directory does not exist or is empty
-if [ ! -d #{guest_dir} ] || [ ! "$(ls -A #{guest_dir})"  ] ; then
-	mkdir -p #{guest_dir};
-	sshfs #{Etc.getlogin}@10.0.2.2:#{host_dir} #{guest_dir};
-fi
-SHELL
+				inline: <<~SHELL
+					# if directory does not exist or is empty
+					if [ ! -d #{guest_dir} ] || [ ! "$(ls -A #{guest_dir})"  ] ; then
+						mkdir -p #{guest_dir};
+						sshfs #{Etc.getlogin}@10.0.2.2:#{host_dir} #{guest_dir};
+					fi
+				SHELL
 		else
 			top = '/home/vagrant'
 			guest_dir = "#{top}/#{guest_dir_rel}"
@@ -120,28 +120,27 @@ Vagrant.configure(2) do |config|
 		#
 		# The password for the Vagrant user is "vagrant".
 		osx.vm.network "forwarded_port", guest: 5900, host: data[:vnc_port]
-		osx.vm.provision :shell, privileged: false, inline: <<SHELL
-# <https://serverfault.com/questions/120559/vnc-viewer-not-connecting-to-mac-from-windows>
-export VNC_PASSWD="vagrant";
-sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate -configure -access -off -restart -agent -privs -all -allowAccessFor -allUsers -clientopts -setvncpw -vncpw $VNC_PASSWD -setvnclegacy -vnclegacy yes
-SHELL
+		osx.vm.provision :shell, privileged: false, inline: <<~SHELL
+			# <https://serverfault.com/questions/120559/vnc-viewer-not-connecting-to-mac-from-windows>
+			export VNC_PASSWD="vagrant";
+			sudo /System/Library/CoreServices/RemoteManagement/ARDAgent.app/Contents/Resources/kickstart -activate -configure -access -off -restart -agent -privs -all -allowAccessFor -allUsers -clientopts -setvncpw -vncpw $VNC_PASSWD -setvnclegacy -vnclegacy yes
+		SHELL
 
 		osx.vm.provision :shell, privileged: false, inline: File.readlines('../script/from-vagrant/os-install-osx-sshfs').join("")
-		osx.vm.provision :shell, privileged: false, inline: <<SHELL
-echo '#{privkey}' > ~/.ssh/id_host
-chmod 600 ~/.ssh/id_host
-# force adding to ~/.ssh/known_hosts so no verification needed
-ssh -o StrictHostKeyChecking=no #{Etc.getlogin}@10.0.2.2 -n true
-SHELL
+		osx.vm.provision :shell, privileged: false, inline: <<~SHELL
+			echo '#{privkey}' > ~/.ssh/id_host
+			chmod 600 ~/.ssh/id_host
+			# force adding to ~/.ssh/known_hosts so no verification needed
+			ssh -o StrictHostKeyChecking=no #{Etc.getlogin}@10.0.2.2 -n true
+		SHELL
 		add_synced_folders( osx, org_toplevel, type: "sshfs" )
-		osx.vm.provision :shell, privileged: false, inline: <<SHELL
-if [ -d "$HOME/project-renard/devops/devops/vagrant" ]; then
-	$HOME/project-renard/devops/devops/vagrant/patch-osx-python
-else
-	$HOME/project-renard/devops/vagrant/patch-osx-python
-fi
-SHELL
-
+		osx.vm.provision :shell, privileged: false, inline: <<~SHELL
+			if [ -d "$HOME/project-renard/devops/devops/vagrant" ]; then
+				$HOME/project-renard/devops/devops/vagrant/patch-osx-python
+			else
+				$HOME/project-renard/devops/vagrant/patch-osx-python
+			fi
+		SHELL
 	end
 end
 
