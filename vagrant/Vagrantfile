@@ -236,6 +236,8 @@ end
 			vagrant ssh win10 -- 'export PATH="$PATH:/cygdrive/c/ProgramData/chocolatey/bin"; choco install -y --allowemptychecksum strawberryperl'
 			vagrant ssh win10 -- 'export PATH="$PATH:/cygdrive/c/ProgramData/chocolatey/bin"; choco install -y --allowemptychecksum git'
 		SHELL
+		# path C:\strawberry\perl\bin;C:\strawberry\perl\site\bin;C:\strawberry\c\bin;%PATH%
+		# path C:\Program Files\Git\bin;%PATH%
 
 		#win10.vm.provision :reload
 
