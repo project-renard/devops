@@ -25,6 +25,50 @@ module LocalCommand
     end
 end
 
+# From <https://github.com/aidanns/vagrant-reload/blob/master/lib/vagrant-reload.rb>
+module VagrantPlugins
+  module Reload
+
+    VERSION = "0.0.1"
+
+    class Plugin < Vagrant.plugin("2")
+      name "Reload"
+      description <<-DESC
+      The reload plugin allows a VM to be reloaded as a provisioning step.
+      DESC
+
+      provisioner "reload" do
+        class ReloadProvisioner < Vagrant.plugin("2", :provisioner)
+
+          def initialize(machine, config)
+            super
+          end
+
+          def configure(root_config)
+          end
+
+          def provision
+            options = {}
+            options[:provision_ignore_sentinel] = false
+            options[:force_halt] = true
+            @machine.action(:halt, force_halt: options[:force_halt])
+            @machine.action(:reload, options)
+            begin
+              sleep 10
+            end until @machine.communicate.ready?
+          end
+
+          def cleanup
+          end
+
+        end
+        ReloadProvisioner
+
+      end
+    end
+  end
+end
+
 
 def debian_shell_provision( config, org_toplevel )
 	prefix = '~/project-renard/devops/script'
@@ -173,14 +217,29 @@ end
 	config.vm.define :win10, autostart: false do |win10|
 		win10.vm.box = "Microsoft/EdgeOnWindows10"
 		win10.ssh.username = "IEUser"
-		config.vm.provision "add ssh public key", type: "local_shell", command: <<~SHELL
-			sshpass -p 'Passw0rd!' vagrant ssh win10 -- 'IFS=$'\''\\n'\''; while read -r; do printf "%s\\n" $REPLY >> ~/.ssh/authorized_keys ; done' < ~/.ssh/authorized_keys
-		SHELL
+		# Do not need to use password authentication since we will install our own key.
 		#win10.ssh.password = "Passw0rd!"
 		win10.ssh.private_key_path = '.id_vagrant'
+
+		# This does not work, so we use the SSH pipe approach.
+		#config.vm.provision "file", source: ".id_vagrant.pub", destination: "~/.ssh/authorized_keys"
+
+		# Sends the SSH key over a pipe.
+		config.vm.provision "add ssh public key", type: "local_shell", command: <<~SHELL
+			sshpass -p 'Passw0rd!' vagrant ssh win10 -- 'IFS=$'\''\\n'\''; while read -r; do printf "%s\\n" $REPLY >> ~/.ssh/authorized_keys ; done' < .id_vagrant.pub
+		SHELL
+
 		win10.ssh.insert_key = true
 
-		add_synced_folders( win10, org_toplevel )
+		win10.vm.provision "Install Chocolatey", type: "local_shell", command: <<~SHELL
+			vagrant ssh win10 -- "PowerShell -Command 'Set-ExecutionPolicy Bypass -Scope Process -Force; iwr https://chocolatey.org/install.ps1 -UseBasicParsing | iex'"
+			vagrant ssh win10 -- 'export PATH="$PATH:/cygdrive/c/ProgramData/chocolatey/bin"; choco install -y --allowemptychecksum strawberryperl'
+			vagrant ssh win10 -- 'export PATH="$PATH:/cygdrive/c/ProgramData/chocolatey/bin"; choco install -y --allowemptychecksum git'
+		SHELL
+
+		#win10.vm.provision :reload
+
+		#add_synced_folders( win10, org_toplevel )
 	end
 
 end
