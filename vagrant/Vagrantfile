@@ -224,6 +224,9 @@ end
 		# This does not work, so we use the SSH pipe approach.
 		#config.vm.provision "file", source: ".id_vagrant.pub", destination: "~/.ssh/authorized_keys"
 
+		# Disable the default synced folder.
+		config.vm.synced_folder ".", "/vagrant", disabled: true
+
 		# Sends the SSH key over a pipe.
 		config.vm.provision "add ssh public key", type: "local_shell", command: <<~SHELL
 			sshpass -p 'Passw0rd!' vagrant ssh win10 -- 'IFS=$'\''\\n'\''; while read -r; do printf "%s\\n" $REPLY >> ~/.ssh/authorized_keys ; done' < .id_vagrant.pub
