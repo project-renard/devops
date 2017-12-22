@@ -583,6 +583,20 @@ EOF
 
 		if( Renard::Devops::Conditional::is_under_travis_ci_linux() ) {
 			# Repo native dependencies will be installed by Travis CI
+
+			my $deps = $repo->debian_get_packages;
+			if( grep { $_ eq 'meson' } @$deps ) {
+				# Install meson via pip because TravisCI does
+				# not yet have packages for meson
+				main::add_to_shell_script( <<'EOF' );
+					export PATH=$(python3 -c "import site, os; print(os.path.join(site.USER_BASE, 'bin'))"):$PATH;
+					export PYTHONPATH=$(python3 -c "import site; print(site.USER_SITE)")${PYTHONPATH:+:}${PYTHONPATH};
+					easy_install3 --user pip;
+					pip3 install --user -U setuptools;
+					pip3 install --user -U meson;
+EOF
+			}
+
 			return;
 		}
 	}
