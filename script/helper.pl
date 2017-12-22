@@ -594,6 +594,11 @@ EOF
 					easy_install3 --user pip;
 					pip3 install --user -U setuptools;
 					pip3 install --user -U meson;
+
+					wget -P /tmp 'https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-linux.zip';
+					mkdir -p ~/bin;
+					unzip -d ~/bin /tmp/ninja-linux.zip;
+					export PATH=$HOME/bin:$PATH;
 EOF
 			}
 
