@@ -21,7 +21,8 @@ if( $0 eq "Makefile.PL"  ) {
 			#
 			# The pattern needs to be case-insensitive because
 			# Windows is case-insensitive.
-			$args{LIBS} =~ s,^(.*?)(\Q-LC:/msys64/mingw64/lib\E\s),$1 :nosearch $2,i;
+			chomp(my $lib_path = `cygpath -m /mingw64/lib`);
+			$args{LIBS} =~ s,^(.*?)(\Q-L$lib_path\E\s),$1 :nosearch $2,i;
 
 			# Special case for expat (XML::Parser::Expat) because
 			# it does not use either of
