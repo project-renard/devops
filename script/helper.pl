@@ -600,6 +600,16 @@ EOF
 					unzip -d ~/bin /tmp/ninja-linux.zip;
 					export PATH=$HOME/bin:$PATH;
 EOF
+				# Use a newer version of gobject-introspection
+				# because the Travis CI is too old.  This only
+				# uses the giscanner part of
+				# gobject-introspection and is a massive hack.
+				main::add_to_shell_script( <<'EOF' );
+					wget -P /tmp 'http://ftp.gnome.org/pub/GNOME/sources/gobject-introspection/1.55/gobject-introspection-1.55.0.tar.xz';
+					tar xvf /tmp/gobject-introspection-1.55.0.tar.xz -C ~/bin/;
+					ln -t ~/bin/gobject-introspection-1.55.0/ -s  /usr/lib/gobject-introspection/giscanner/_giscanner.so;
+					export UNINSTALLED_INTROSPECTION_SRCDIR=$HOME/bin/gobject-introspection-1.55.0;
+EOF
 			}
 
 			return;
