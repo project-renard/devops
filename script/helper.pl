@@ -770,6 +770,7 @@ EOF
 
 			n=0;
 			until [ \$n -ge $Renard::Devops::Dictionary::repeat_count ]; do
+				cpanm -n File::Copy::Recursive\@0.38;
 				cpanm -n Dist::Zilla && break;
 				n=\$((n+1));
 			done
