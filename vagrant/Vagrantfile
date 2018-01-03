@@ -238,6 +238,7 @@ end
 			vagrant ssh win10 -- "PowerShell -Command 'Set-ExecutionPolicy Bypass -Scope Process -Force; iwr https://chocolatey.org/install.ps1 -UseBasicParsing | iex'"
 			vagrant ssh win10 -- 'export PATH="$PATH:/cygdrive/c/ProgramData/chocolatey/bin"; choco install -y --allowemptychecksum strawberryperl'
 			vagrant ssh win10 -- 'export PATH="$PATH:/cygdrive/c/ProgramData/chocolatey/bin"; choco install -y --allowemptychecksum git'
+			vagrant ssh win10 -- 'export PATH="$PATH:/cygdrive/c/ProgramData/chocolatey/bin"; choco install -y --allowemptychecksum msys2 --params " /InstallDir:C:/msys64"'
 		SHELL
 		# path C:\strawberry\perl\bin;C:\strawberry\perl\site\bin;C:\strawberry\c\bin;%PATH%
 		# path C:\Program Files\Git\bin;%PATH%
