@@ -926,6 +926,7 @@ package Renard::Devops::Repo {
 
 	sub uninstall_cmd_list {
 		my ($self) = @_;
+		return () if $ENV{RENARD_DEVOPS_HOOK_SKIP_PM_UNINSTALL};
 		if( exists $self->{_dist_name} ) {
 			return ( qw(pm-uninstall -vfn), $self->{_dist_name} );
 		}
