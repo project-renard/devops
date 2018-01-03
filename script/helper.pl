@@ -65,6 +65,7 @@ package Renard::Devops::Dictionary {
 	our $repeat_count = 1;
 
 	our $filter_grep = ''
+		. q| -e '^\W'|
 		. q| -e '^Possibly harmless'|
 		. q| -e '^Attempt to reload.*aborted'|
 		. q| -e 'BEGIN failed--compilation aborted'|
