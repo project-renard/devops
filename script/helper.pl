@@ -770,6 +770,8 @@ EOF
 
 			n=0;
 			until [ \$n -ge $Renard::Devops::Dictionary::repeat_count ]; do
+				#cpanm --verbose -n Carp::Always autodie;
+				#export PERL5OPT='-MCarp::Always -Mautodie';
 				cpanm -n File::Copy::Recursive\@0.38;
 				cpanm -n Dist::Zilla && break;
 				n=\$((n+1));
@@ -837,6 +839,8 @@ EOF
 
 	sub cygpath {
 		my ($system, $path_orig) = @_;
+		my $msystem_lc = lc $ENV{MSYSTEM};
+		local $ENV{PATH} = "C:\\$ENV{MSYS2_DIR}\\$msystem_lc\\bin;C:\\$ENV{MSYS2_DIR}\\usr\\bin;$ENV{PATH}";
 		chomp(my $path = `cygpath -u $path_orig`);
 
 		$path;
@@ -858,6 +862,7 @@ EOF
 			. \$APPVEYOR_BUILD_FOLDER/../external/project-renard/devops/ENV.sh;
 			if [ -f dist.ini ]; then
 				export DZIL=\$(which dzil);
+				rm -Rfv build-dir;
 				perl \$DZIL build --in build-dir;
 				cd build-dir;
 			fi;
