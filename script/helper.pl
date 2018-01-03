@@ -88,8 +88,9 @@ EOF
 
 	n=0;
 	until [ \$n -ge $repeat_count ]; do
-		perl \$DZIL build --in build-dir;
-		command cpanm --notest ./build-dir && break;
+		rm -Rfv ../build-dir;
+		perl \$DZIL build --in ../build-dir;
+		command cpanm --notest ../build-dir && break;
 	done;
 EOF
 
@@ -862,9 +863,9 @@ EOF
 			. \$APPVEYOR_BUILD_FOLDER/../external/project-renard/devops/ENV.sh;
 			if [ -f dist.ini ]; then
 				export DZIL=\$(which dzil);
-				rm -Rfv build-dir;
-				perl \$DZIL build --in build-dir;
-				cd build-dir;
+				rm -Rfv ../build-dir;
+				perl \$DZIL build --in ../build-dir;
+				cd ../build-dir;
 			fi;
 
 			if [ -f Makefile.PL ]; then
