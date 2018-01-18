@@ -163,6 +163,10 @@ Vagrant.configure(2) do |config|
 		debian_shell_provision(precise, org_toplevel)
 	end
 
+	# To add the Yosemite box, run
+	#
+	#     $ vagrant box add https://vagrantcloud.com/AndrewDryga/boxes/vagrant-box-osx/versions/0.2.1/providers/virtualbox.box --name AndrewDryga/vagrant-box-osx-yosemite
+	#
 	# To add the Sierra box, run
 	#
 	#     $ vagrant box add http://files.dryga.com/boxes/osx-sierra-0.3.1.box --name AndrewDryga/vagrant-box-osx-sierra
@@ -172,7 +176,7 @@ Vagrant.configure(2) do |config|
 {
 	'osx-yosemite-10.10' => {
 			vnc_port: 5908,
-			box: 'AndrewDryga/vagrant-box-osx' },
+			box: 'AndrewDryga/vagrant-box-osx-yosemite' },
 	'osx-sierra-10.12'   => {
 			vnc_port: 5909,
 			box: 'AndrewDryga/vagrant-box-osx-sierra' },
