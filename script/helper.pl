@@ -423,6 +423,12 @@ EOF
 	sub repo_install_native {
 		my ($system, $repo) = @_;
 
+		my $taps = $repo->homebrew_get_taps;
+		for my $tap (@$taps) {
+			$main::runner->system( qq{brew tap $tap} )
+		}
+		$main::runner->system(qw(brew update));
+
 		my $deps = $repo->homebrew_get_packages;
 		say STDERR "Installing repo native deps";
 		if( @$deps ) {
@@ -1045,6 +1051,17 @@ package Renard::Devops::Repo {
 			push @$data, @{ $self->devops_data->{native}{debian}{packages} || [] };
 		} elsif( -r $self->debian_packages_path ) {
 			push @$data, @{ $self->slurp_package_list_file( $self->debian_packages_path ) || [] };
+		}
+
+		return $data;
+	}
+
+	sub homebrew_get_taps {
+		my ($self) = @_;
+
+		my $data = [];
+		if( -r $self->devops_config_path ) {
+			push @$data, @{ $self->devops_data->{native}{'macos-homebrew'}{taps} || [] };
 		}
 
 		return $data;
