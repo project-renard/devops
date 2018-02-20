@@ -720,9 +720,19 @@ package Renard::Devops::Env::MSWin::MSYS2 {
 			pacman -S --needed --noconfirm git;
 EOF
 
+		# For the `--ask 20` option, see
+		# <https://github.com/Alexpux/MSYS2-packages/issues/1141>.
+		#
+		# Otherwise the message
+		#
+		#     :: msys2-runtime and catgets are in conflict. Remove catgets? [y/N]
+		#
+		# is displayed when trying to update followed by an exit rather
+		# than selecting yes.
+
 		# Update
 		run_under_mingw( <<EOF );
-			pacman -Syu --noconfirm;
+			pacman -Syu --ask 20 --noconfirm;
 EOF
 
 		# build tools
