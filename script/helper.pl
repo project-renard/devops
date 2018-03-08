@@ -332,6 +332,7 @@ package Renard::Devops::Env::Vagrant {
 
 	sub pre_native {
 		pipe_to_bash( <<'END' );
+sudo add-apt-repository ppa:deadsnakes/ppa
 sudo apt-get -y update
 sudo apt-get -y upgrade
 sudo apt-get -y install build-essential vim curl wget libgirepository1.0-dev libgdl-3-5 gobject-introspection libgtk-3-dev
