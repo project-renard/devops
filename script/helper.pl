@@ -587,20 +587,21 @@ EOF
 			# Repo native dependencies will be installed by Travis CI
 
 			my $deps = $repo->debian_get_packages;
+			my $python = 'python3.5';
 			if( grep { $_ eq 'meson' } @$deps ) {
 				# Install meson via pip because TravisCI does
 				# not yet have packages for meson
-				main::add_to_shell_script( <<'EOF' );
-					export PATH=$(python3 -c "import site, os; print(os.path.join(site.USER_BASE, 'bin'))"):$PATH;
-					export PYTHONPATH=$(python3 -c "import site; print(site.USER_SITE)")${PYTHONPATH:+:}${PYTHONPATH};
-					easy_install3 --user pip;
+				main::add_to_shell_script( <<"EOF" );
+					export PATH=\$($python -c "import site, os; print(os.path.join(site.USER_BASE, 'bin'))"):\$PATH;
+					export PYTHONPATH=\$($python -c "import site; print(site.USER_SITE)")\${PYTHONPATH:+:}\${PYTHONPATH};
+					$python \$(which easy_install3) --user pip;
 					pip3 install --user -U setuptools;
 					pip3 install --user -U meson;
 
 					wget -P /tmp 'https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-linux.zip';
 					mkdir -p ~/bin;
 					unzip -d ~/bin /tmp/ninja-linux.zip;
-					export PATH=$HOME/bin:$PATH;
+					export PATH=\$HOME/bin:\$PATH;
 EOF
 				# Use a newer version of gobject-introspection
 				# because the Travis CI is too old.  This only
