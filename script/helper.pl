@@ -393,6 +393,7 @@ package Renard::Devops::Env::MacOS::Homebrew {
 		say STDERR "Installing xquartz homebrew cask for X11 support";
 		$main::runner->system(qw(brew tap Caskroom/cask));
 		$main::runner->system(qw(brew install Caskroom/cask/xquartz));
+		$main::runner->system(qw(brew install openssl));
 
 		# Set up for libffi linking
 		unshift @PKG_CONFIG_PATH, '/usr/local/opt/libffi/lib/pkgconfig';
