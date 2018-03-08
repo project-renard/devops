@@ -118,7 +118,6 @@ def add_synced_folders( config, org_toplevel, options = {} )
 				p5-Renard-Incunabula-Format-OOXML
 				p5-Renard-Incunabula-Format-PDF
 				p5-Renard-Incunabula-Frontend-Gtk3
-				p5-Renard-Incunabula-Frontend-Gtk3-WebKit2
 				p5-Renard-Incunabula-Glib
 				p5-Renard-Incunabula-Language-EN
 				p5-Renard-Incunabula-MuPDF-Inline
