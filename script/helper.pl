@@ -594,6 +594,10 @@ EOF
 			# Repo native dependencies will be installed by Travis CI
 
 			my $deps = $repo->debian_get_packages;
+			# Meson requires Python 3.5 as a minimum.
+			# See <https://github.com/mesonbuild/meson/commit/1ea96b710b646bf45b614b397d6e87d07427e38a>.
+			# To use this on Travis CI, installing the python3.5
+			# package via the deadsnakes PPA is necessary.
 			my $python = 'python3.5';
 			if( grep { $_ eq 'meson' } @$deps ) {
 				# Install meson via pip because TravisCI does
