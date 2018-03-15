@@ -624,10 +624,15 @@ EOF
 				# uses the giscanner part of
 				# gobject-introspection and is a massive hack.
 				main::add_to_shell_script( <<'EOF' );
+					wget -P /tmp 'http://ftp.gnome.org/pub/GNOME/sources/glib/2.56/glib-2.56.0.tar.xz';
+					tar xvf /tmp/glib-2.56.0.tar.xz -C ~/bin;
+					( cd ~/bin/glib-2.56.0 && ./configure --disable-libmount --prefix=$HOME/prefix && make -j4 install );
+					export PKG_CONFIG_PATH=$HOME/prefix/lib/pkgconfig
+
 					wget -P /tmp 'http://ftp.gnome.org/pub/GNOME/sources/gobject-introspection/1.55/gobject-introspection-1.55.2.tar.xz';
 					tar xvf /tmp/gobject-introspection-1.55.2.tar.xz -C ~/bin/;
-					ln -t ~/bin/gobject-introspection-1.55.2/ -s  /usr/lib/gobject-introspection/giscanner/_giscanner.so;
-					export UNINSTALLED_INTROSPECTION_SRCDIR=$HOME/bin/gobject-introspection-1.55.2;
+					( cd ~/bin/gobject-introspection-1.55.2 && ./configure --prefix=$HOME/prefix && make -j4 install );
+					export PATH="$HOME/prefix/bin:$PATH";
 EOF
 			}
 
