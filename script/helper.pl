@@ -425,6 +425,8 @@ EOF
 		Renard::Devops::Dictionary->pre_perl_install_module_build_deps;
 		Renard::Devops::Dictionary->pre_perl_install_devops_deps;
 
+		$main::runner->system(qw(cpanm Net::SSLeay));
+
 		main::add_to_shell_script( Renard::Devops::Dictionary->pre_perl_local_lib_shell_eval );
 		main::add_to_shell_script( q|export ARCHFLAGS='-arch x86_64'| );
 	}
