@@ -340,6 +340,7 @@ sudo apt-get -y install gir1.2-gdl-3 libpoppler-glib-dev poppler-utils mupdf-too
 sudo apt-get -y install --no-install-recommends glade
 sudo apt-get -y install libssl-dev
 
+if [ ! -r $HOME/.bashrc.project-renard ]; then
 echo "Adding the ENV settings"
 cat <<'EOF' >> $HOME/.bashrc.project-renard
 for ENV_PATH in ~/project-renard/devops/ENV.sh ~/project-renard/devops/devops/ENV.sh; do
@@ -349,6 +350,7 @@ for ENV_PATH in ~/project-renard/devops/ENV.sh ~/project-renard/devops/devops/EN
 done
 EOF
 echo "source ~/.bashrc.project-renard" >> $HOME/.bashrc
+fi
 
 END
 	}
