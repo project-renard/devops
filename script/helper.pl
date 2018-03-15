@@ -624,15 +624,20 @@ EOF
 				# uses the giscanner part of
 				# gobject-introspection and is a massive hack.
 				main::add_to_shell_script( <<'EOF' );
-					wget -P /tmp 'http://ftp.gnome.org/pub/GNOME/sources/glib/2.56/glib-2.56.0.tar.xz';
-					tar xvf /tmp/glib-2.56.0.tar.xz -C ~/bin;
-					( cd ~/bin/glib-2.56.0 && ./configure --disable-libmount --prefix=$HOME/prefix && make -j4 install );
-					export PKG_CONFIG_PATH=$HOME/prefix/lib/pkgconfig
+					export PKG_CONFIG_PATH="$HOME/perl5/prefix/lib/pkgconfig:$PKG_CONFIG_PATH"
+					export PATH="$HOME/perl5/prefix/bin:$PATH";
 
-					wget -P /tmp 'http://ftp.gnome.org/pub/GNOME/sources/gobject-introspection/1.55/gobject-introspection-1.55.2.tar.xz';
-					tar xvf /tmp/gobject-introspection-1.55.2.tar.xz -C ~/bin/;
-					( cd ~/bin/gobject-introspection-1.55.2 && ./configure --prefix=$HOME/prefix && make -j4 install );
-					export PATH="$HOME/prefix/bin:$PATH";
+					if ! pkg-config --atleast-version=2.54.0 glib-2.0; then
+						wget -P /tmp 'http://ftp.gnome.org/pub/GNOME/sources/glib/2.56/glib-2.56.0.tar.xz';
+						tar xvf /tmp/glib-2.56.0.tar.xz -C ~/bin;
+						( cd ~/bin/glib-2.56.0 && ./configure --disable-libmount --prefix=$HOME/perl5/prefix && make -j4 install );
+					fi
+
+					if ! pkg-config --atleast-version=1.54.0 gobject-introspection-1.0; then
+						wget -P /tmp 'http://ftp.gnome.org/pub/GNOME/sources/gobject-introspection/1.55/gobject-introspection-1.55.2.tar.xz';
+						tar xvf /tmp/gobject-introspection-1.55.2.tar.xz -C ~/bin/;
+						( cd ~/bin/gobject-introspection-1.55.2 && ./configure --prefix=$HOME/perl5/prefix && make -j4 install );
+					fi
 EOF
 			}
 
