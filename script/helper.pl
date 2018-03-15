@@ -620,9 +620,8 @@ EOF
 					export PATH=\$HOME/bin:\$PATH;
 EOF
 				# Use a newer version of gobject-introspection
-				# because the Travis CI is too old.  This only
-				# uses the giscanner part of
-				# gobject-introspection and is a massive hack.
+				# because the Travis CI is too old. The deps are:
+				#   $ apt install flex bison python-dev
 				main::add_to_shell_script( <<'EOF' );
 					export PKG_CONFIG_PATH="$HOME/perl5/prefix/lib/pkgconfig:$PKG_CONFIG_PATH"
 					export PATH="$HOME/perl5/prefix/bin:$PATH";
