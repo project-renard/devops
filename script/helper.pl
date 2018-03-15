@@ -616,7 +616,7 @@ EOF
 
 					wget -P /tmp 'https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-linux.zip';
 					mkdir -p ~/bin;
-					unzip -d ~/bin /tmp/ninja-linux.zip;
+					unzip -u -d ~/bin /tmp/ninja-linux.zip;
 					export PATH=\$HOME/bin:\$PATH;
 EOF
 				# Use a newer version of gobject-introspection
