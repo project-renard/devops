@@ -113,6 +113,7 @@ def add_synced_folders( config, org_toplevel, options = {} )
 
 				p5-Renard-Boteh
 				p5-Renard-Incunabula
+				p5-Renard-Incunabula-Cairo
 				p5-Renard-Incunabula-Document
 				p5-Renard-Incunabula-Format-Cairo
 				p5-Renard-Incunabula-Format-OOXML
