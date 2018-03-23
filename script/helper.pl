@@ -626,6 +626,7 @@ EOF
 				#   $ apt install flex bison python-dev
 				main::add_to_shell_script( <<'EOF' );
 					export PKG_CONFIG_PATH="$HOME/perl5/prefix/lib/pkgconfig:$PKG_CONFIG_PATH"
+					export LD_LIBRARY_PATH="$HOME/perl5/prefix/lib:$LD_LIBRARY_PATH"
 					export PATH="$HOME/perl5/prefix/bin:$PATH";
 
 					if ! pkg-config --atleast-version=2.54.0 glib-2.0; then
