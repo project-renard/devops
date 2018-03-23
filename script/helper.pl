@@ -630,13 +630,13 @@ EOF
 					export PATH="$HOME/perl5/prefix/bin:$PATH";
 
 					if ! pkg-config --atleast-version=2.54.0 glib-2.0; then
-						wget -P /tmp 'http://ftp.gnome.org/pub/GNOME/sources/glib/2.56/glib-2.56.0.tar.xz';
+						wget -nc -P /tmp 'http://ftp.gnome.org/pub/GNOME/sources/glib/2.56/glib-2.56.0.tar.xz';
 						tar xvf /tmp/glib-2.56.0.tar.xz -C ~/bin;
 						( cd ~/bin/glib-2.56.0 && ./configure --disable-libmount --prefix=$HOME/perl5/prefix && make -j4 install );
 					fi
 
 					if ! pkg-config --atleast-version=1.54.0 gobject-introspection-1.0; then
-						wget -P /tmp 'http://ftp.gnome.org/pub/GNOME/sources/gobject-introspection/1.55/gobject-introspection-1.55.2.tar.xz';
+						wget -nc -P /tmp 'http://ftp.gnome.org/pub/GNOME/sources/gobject-introspection/1.55/gobject-introspection-1.55.2.tar.xz';
 						tar xvf /tmp/gobject-introspection-1.55.2.tar.xz -C ~/bin/;
 						( cd ~/bin/gobject-introspection-1.55.2 && ./configure --prefix=$HOME/perl5/prefix && make -j4 install );
 					fi
