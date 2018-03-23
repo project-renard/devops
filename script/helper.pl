@@ -628,6 +628,7 @@ EOF
 					export DEVOPS_BUILD_PREFIX="$HOME/devops-prefix";
 					export PKG_CONFIG_PATH="$DEVOPS_BUILD_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH"
 					export LD_LIBRARY_PATH="$DEVOPS_BUILD_PREFIX/lib:$LD_LIBRARY_PATH"
+					export GI_TYPELIB_PATH="$DEVOPS_BUILD_PREFIX/lib/girepository-1.0"
 					export PATH="$DEVOPS_BUILD_PREFIX/bin:$PATH";
 
 					if ! pkg-config --atleast-version=2.54.0 glib-2.0; then
