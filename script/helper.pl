@@ -625,7 +625,7 @@ EOF
 				# because the Travis CI is too old. The deps are:
 				#   $ apt install flex bison python-dev
 				main::add_to_shell_script( <<'EOF' );
-					export DEVOPS_BUILD_PREFIX="$HOME/perl5/prefix";
+					export DEVOPS_BUILD_PREFIX="$HOME/devops-prefix";
 					export PKG_CONFIG_PATH="$DEVOPS_BUILD_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH"
 					export LD_LIBRARY_PATH="$DEVOPS_BUILD_PREFIX/lib:$LD_LIBRARY_PATH"
 					export PATH="$DEVOPS_BUILD_PREFIX/bin:$PATH";
