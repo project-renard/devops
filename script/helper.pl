@@ -336,6 +336,8 @@ sudo add-apt-repository ppa:deadsnakes/ppa
 sudo apt-get -y update
 sudo apt-get -y upgrade
 sudo apt-get -y install build-essential vim curl wget libgirepository1.0-dev libgdl-3-5 gobject-introspection libgtk-3-dev
+sudo apt-get -y install flex bison python-dev python3.5
+sudo apt-get -y install python3-setuptools libgirepository1.0-dev python3.5
 sudo apt-get -y install gir1.2-gdl-3 libpoppler-glib-dev poppler-utils mupdf-tools git libglib-object-introspection-perl
 sudo apt-get -y install xvfb unzip
 sudo apt-get -y install --no-install-recommends glade
@@ -616,7 +618,7 @@ EOF
 
 					wget -P /tmp 'https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-linux.zip';
 					mkdir -p ~/bin;
-					unzip -u -d ~/bin /tmp/ninja-linux.zip;
+					yes | unzip -f -d ~/bin /tmp/ninja-linux.zip;
 					export PATH=\$HOME/bin:\$PATH;
 EOF
 				# Use a newer version of gobject-introspection
