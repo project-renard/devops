@@ -616,9 +616,9 @@ EOF
 					pip3 install --user -U setuptools;
 					pip3 install --user -U meson;
 
-					wget -P /tmp 'https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-linux.zip';
+					wget -nc -P /tmp 'https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-linux.zip';
 					mkdir -p ~/bin;
-					yes | unzip -f -d ~/bin /tmp/ninja-linux.zip;
+					yes | unzip -u -d ~/bin /tmp/ninja-linux.zip;
 					export PATH=\$HOME/bin:\$PATH;
 EOF
 				# Use a newer version of gobject-introspection
