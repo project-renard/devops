@@ -570,6 +570,15 @@ package Renard::Devops::Env::Linux::Debian {
 				sh -e /etc/init.d/xvfb start;
 				sleep 3;
 EOF
+			main::add_to_shell_script( <<'EOF' );
+				export DEVOPS_BUILD_PREFIX="$HOME/devops-prefix";
+				mkdir -p $DEVOPS_BUILD_PREFIX;
+				export PKG_CONFIG_PATH="$DEVOPS_BUILD_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH";
+				export LD_LIBRARY_PATH="$DEVOPS_BUILD_PREFIX/lib:$LD_LIBRARY_PATH";
+				export GI_TYPELIB_PATH="$DEVOPS_BUILD_PREFIX/lib/girepository-1.0";
+				export PATH="$DEVOPS_BUILD_PREFIX/bin:$PATH";
+EOF
+
 		}
 	}
 
@@ -629,12 +638,6 @@ EOF
 				# because the Travis CI is too old. The deps are:
 				#   $ apt install flex bison python-dev
 				main::add_to_shell_script( <<'EOF' );
-					export DEVOPS_BUILD_PREFIX="$HOME/devops-prefix";
-					export PKG_CONFIG_PATH="$DEVOPS_BUILD_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH";
-					export LD_LIBRARY_PATH="$DEVOPS_BUILD_PREFIX/lib:$LD_LIBRARY_PATH";
-					export GI_TYPELIB_PATH="$DEVOPS_BUILD_PREFIX/lib/girepository-1.0";
-					export PATH="$DEVOPS_BUILD_PREFIX/bin:$PATH";
-
 					if ! pkg-config --atleast-version=2.54.0 glib-2.0; then
 						wget -nc -P /tmp 'http://ftp.gnome.org/pub/GNOME/sources/glib/2.56/glib-2.56.0.tar.xz';
 						tar xvf /tmp/glib-2.56.0.tar.xz -C ~/bin;
