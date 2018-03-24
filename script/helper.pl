@@ -610,16 +610,20 @@ EOF
 				# Install meson via pip because TravisCI does
 				# not yet have packages for meson
 				main::add_to_shell_script( <<"EOF" );
-					export PATH=\$($python -c "import site, os; print(os.path.join(site.USER_BASE, 'bin'))"):\$PATH;
-					export PYTHONPATH=\$($python -c "import site; print(site.USER_SITE)")\${PYTHONPATH:+:}\${PYTHONPATH};
-					$python \$(which easy_install3) --user pip;
-					pip3 install --user -U setuptools;
-					pip3 install --user -U meson;
+					if ! which meson >/dev/null; then
+						export PATH=\$($python -c "import site, os; print(os.path.join(site.USER_BASE, 'bin'))"):\$PATH;
+						export PYTHONPATH=\$($python -c "import site; print(site.USER_SITE)")\${PYTHONPATH:+:}\${PYTHONPATH};
+						$python \$(which easy_install3) --user pip;
+						pip3 install --user -U setuptools;
+						pip3 install --user -U meson;
+					fi
 
-					wget -nc -P /tmp 'https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-linux.zip';
-					mkdir -p ~/bin;
-					yes | unzip -u -d ~/bin /tmp/ninja-linux.zip;
-					export PATH=\$HOME/bin:\$PATH;
+					if ! which ninja >/dev/null; then
+						wget -nc -P /tmp 'https://github.com/ninja-build/ninja/releases/download/v1.8.2/ninja-linux.zip';
+						mkdir -p ~/bin;
+						yes | unzip -u -d ~/bin /tmp/ninja-linux.zip;
+						export PATH=\$HOME/bin:\$PATH;
+					fi
 EOF
 				# Use a newer version of gobject-introspection
 				# because the Travis CI is too old. The deps are:
