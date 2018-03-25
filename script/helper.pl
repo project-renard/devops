@@ -559,9 +559,18 @@ EOF
 };
 
 package Renard::Devops::Env::Linux::Debian {
-	use Env qw(@PATH);
+	use Env qw(@PATH $HOME $DEVOPS_BUILD_PREFIX @PKG_CONFIG_PATH @LD_LIBRARY_PATH @GI_TYPELIB_PATH);
+
+	sub _setup_env {
+		$DEVOPS_BUILD_PREFIX =    "$HOME/devops-prefix";
+		unshift @PKG_CONFIG_PATH, "$DEVOPS_BUILD_PREFIX/lib/pkgconfig";
+		unshift @LD_LIBRARY_PATH, "$DEVOPS_BUILD_PREFIX/lib";
+		unshift @GI_TYPELIB_PATH, "$DEVOPS_BUILD_PREFIX/lib/girepository-1.0";
+		unshift @PATH,            "$DEVOPS_BUILD_PREFIX/bin";
+	}
 
 	sub pre_native {
+		my ($self) = @_;
 		if( Renard::Devops::Conditional::is_under_travis_ci_linux() ) {
 			# start xvfb (for headless env)
 			# give xvfb some time to start
@@ -570,13 +579,15 @@ package Renard::Devops::Env::Linux::Debian {
 				sh -e /etc/init.d/xvfb start;
 				sleep 3;
 EOF
-			main::add_to_shell_script( <<'EOF' );
-				export DEVOPS_BUILD_PREFIX="$HOME/devops-prefix";
-				mkdir -p $DEVOPS_BUILD_PREFIX;
-				export PKG_CONFIG_PATH="$DEVOPS_BUILD_PREFIX/lib/pkgconfig:$PKG_CONFIG_PATH";
-				export LD_LIBRARY_PATH="$DEVOPS_BUILD_PREFIX/lib:$LD_LIBRARY_PATH";
-				export GI_TYPELIB_PATH="$DEVOPS_BUILD_PREFIX/lib/girepository-1.0";
-				export PATH="$DEVOPS_BUILD_PREFIX/bin:$PATH";
+
+			$self->_setup_env;
+			main::add_to_shell_script( <<"EOF" );
+				export DEVOPS_BUILD_PREFIX="$ENV{DEVOPS_BUILD_PREFIX}";
+				mkdir -p \$DEVOPS_BUILD_PREFIX;
+				export PKG_CONFIG_PATH="$ENV{PKG_CONFIG_PATH}";
+				export LD_LIBRARY_PATH="$ENV{LD_LIBRARY_PATH}";
+				export GI_TYPELIB_PATH="$ENV{GI_TYPELIB_PATH}";
+				export PATH="$ENV{PATH}";
 EOF
 
 		}
@@ -690,6 +701,7 @@ EOF
 		my ($system, $repo) = @_;
 
 		say STDERR "Trying to install " . $repo->{_dist_name} . " @ " . $repo->commit_hash_of_head;
+		$system->_setup_env;
 
 		if( ! $repo->need_to_install) {
 			say STDERR $repo->{_dist_name} . " @ " . $repo->commit_hash_of_head . " already installed.";
