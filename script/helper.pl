@@ -339,7 +339,7 @@ sudo apt-get -y install build-essential vim curl wget libgirepository1.0-dev lib
 sudo apt-get -y install flex bison python-dev python3.5
 sudo apt-get -y install python3-setuptools libgirepository1.0-dev python3.5
 sudo apt-get -y install gir1.2-gdl-3 libpoppler-glib-dev poppler-utils mupdf-tools git libglib-object-introspection-perl
-sudo apt-get -y install xvfb unzip
+sudo apt-get -y install xvfb unzip git
 sudo apt-get -y install --no-install-recommends glade
 sudo apt-get -y install libssl-dev
 
