@@ -979,8 +979,8 @@ package Renard::Devops::Repo {
 		my $cpanfile_git_path = File::Spec->catfile($self->path, qw(maint cpanfile-git));
 		if ( -r $cpanfile_git_path  ) {
 			my $m = Module::CPANfile->load($cpanfile_git_path);
-			$data = +{ map { $_->requirement->name => $_->requirement->options }
-				@{ $m->{_prereqs}->{prereqs} } }
+			$data = +{ map { $_ => $m->options_for_module($_) }
+				$m->prereqs->merged_requirements->required_modules };
 		}
 
 		return $data;
