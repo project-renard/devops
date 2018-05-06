@@ -453,7 +453,7 @@ EOF
 				1 if $@;
 			} @$deps;
 			say STDERR "Native deps to install: @deps_to_install";
-			$main::runner->system( qq{brew install @deps_to_install} ) if @deps_to_install;
+			$main::runner->system( qq{brew install @deps_to_install || true} ) if @deps_to_install;
 			$main::runner->system( qq{brew install @$deps || true} ) if @deps_to_install;
 		}
 	}
