@@ -399,6 +399,9 @@ package Renard::Devops::Env::MacOS::Homebrew {
 		$main::runner->system(qw(brew tap Caskroom/cask));
 		$main::runner->system(qw(brew install Caskroom/cask/xquartz));
 
+		# Set up for pkg-config
+		$main::runner->system(qw(brew install pkg-config));
+
 		# Set up for OpenSSL (linking and utilities)
 		$main::runner->system(qw(brew install openssl));
 		unshift @PKG_CONFIG_PATH, '/usr/local/opt/openssl/lib/pkgconfig';
