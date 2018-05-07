@@ -100,7 +100,7 @@ EOF
 
 	n=0;
 	until [ \$n -ge $repeat_count ]; do
-		perl \$DZIL authordeps | xargs cpanm -n && break;
+		perl \$DZIL authordeps | command cpanm -n && break;
 		echo '=== authordeps missing ==='
 		perl \$DZIL authordeps --missing
 		echo '=========================='
