@@ -477,6 +477,7 @@ EOF
 
 		if( $repo->main_repo ) {
 			main::add_to_shell_script( <<EOF );
+			export AUTHOR_TESTING=1;
 			function cpanm {
 				eval \$(perl -I ~/perl5/lib/perl5/ -Mlocal::lib);
 				if [ -r $dist_ini ]; then
@@ -518,7 +519,7 @@ EOF
 			my $repo_path = $repo->path;
 			my $module_name = $repo->{_dist_name};
 			main::add_to_shell_script( <<EOF );
-				( cd $repo_path; perl $helper_script install-perl-dep $module_name );
+				( cd $repo_path; export AUTHOR_TESTING=0; perl $helper_script install-perl-dep $module_name );
 EOF
 		}
 	}
@@ -681,6 +682,7 @@ EOF
 		# NOTE: we only run coverage on Linux.
 		if( $repo->main_repo ) {
 			main::add_to_shell_script( <<'EOF' );
+			export AUTHOR_TESTING=1;
 			if [ -n "$COVERAGE" ] && [ "$COVERAGE" != "0" ]; then
 				echo "Make B::Deparse use Data::Dumper";
 				FULL_RENARD_SCRIPT_BASE=$(cd $RENARD_SCRIPT_BASE && pwd);
@@ -695,7 +697,7 @@ EOF
 			my $repo_path = $repo->path;
 			my $module_name = $repo->{_dist_name};
 			main::add_to_shell_script( <<EOF );
-				( cd $repo_path; perl $helper_script install-perl-dep $module_name );
+				( cd $repo_path; export AUTHOR_TESTING=0; perl $helper_script install-perl-dep $module_name );
 EOF
 		}
 	}
