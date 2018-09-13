@@ -1088,28 +1088,12 @@ package Renard::Devops::Repo {
 		YAML::Tiny::DumpFile( $self->maint_config_yml_path, $data );
 	}
 
-	sub slurp_package_list_file {
-		my ($self, $file) = @_;
-
-		return [] unless -r $file;
-
-		open my $fh, '<', $file or die;
-		local $/ = undef;
-		my $data = <$fh>;
-		close $fh;
-		$data =~ s/#.*//;
-
-		my $package_list = [ split /\s+/, $data ];;
-	}
-
 	sub debian_get_packages {
 		my ($self) = @_;
 
 		my $data = [];
 		if( -r $self->devops_config_path ) {
 			push @$data, @{ $self->devops_data->{native}{debian}{packages} || [] };
-		} elsif( -r $self->debian_packages_path ) {
-			push @$data, @{ $self->slurp_package_list_file( $self->debian_packages_path ) || [] };
 		}
 
 		return $data;
@@ -1121,8 +1105,6 @@ package Renard::Devops::Repo {
 		my $data = [];
 		if( -r $self->devops_config_path ) {
 			push @$data, @{ $self->devops_data->{native}{'macos-homebrew'}{packages} || [] };
-		} elsif( -r $self->homebrew_packages_path ) {
-			push @$data, @{ $self->slurp_package_list_file( $self->homebrew_packages_path ) || [] };
 		}
 
 		return $data;
@@ -1134,22 +1116,8 @@ package Renard::Devops::Repo {
 		my $data = [];
 		if( -r $self->devops_config_path ) {
 			push @$data, @{ $self->devops_data->{native}{'msys2-mingw64'}{packages} || [] };
-		} elsif( -r $self->msys2_mingw64_packages_path ) {
-			push @$data, @{ $self->slurp_package_list_file( $self->msys2_mingw64_packages_path ) || [] };
 		}
 
 		return $data;
-	}
-
-	sub debian_packages_path {
-		File::Spec->catfile( $_[0]->path, qw(maint packages-debian) );
-	}
-
-	sub homebrew_packages_path {
-		File::Spec->catfile( $_[0]->path, qw(maint packages-homebrew));
-	}
-
-	sub msys2_mingw64_packages_path {
-		File::Spec->catfile( $_[0]->path, qw(maint packages-msys2-mingw64));
 	}
 };
