@@ -274,6 +274,9 @@ sub clone_repo {
 	my $path = File::Spec->catfile($main::external_top_dir, split(m|/|, $parts));
 
 	my $repo = $main::REPO_URL_TO_REPO{$url} // undef;
+	if( ! defined $repo && -d $path ) {
+		return $path;
+	}
 	unless( defined $repo ) {
 		$main::runner->system(qw(git clone),
 			qw(-b), $branch,
