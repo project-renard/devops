@@ -869,7 +869,7 @@ EOF
 		local $devops_dir = "../external/project-renard/devops";
 		return <<EOF;
 			. \$APPVEYOR_BUILD_FOLDER/$devops_dir/script/mswin/EUMMnosearch.sh;
-			export MAKEFLAGS='-j4 -P4';
+			#export MAKEFLAGS='-j4 -P4';
 EOF
 	}
 
