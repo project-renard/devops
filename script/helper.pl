@@ -798,6 +798,7 @@ EOF
 		# There is not a corresponding cc for the mingw64 gcc. So we copy it in place.
 		run_under_mingw( <<'EOF' );
 		cp -pv /mingw64/bin/gcc /mingw64/bin/cc
+		cp -pv /usr/bin/make /usr/bin/gmake
 EOF
 	}
 
