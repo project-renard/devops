@@ -744,10 +744,12 @@ EOF
 }
 
 package Renard::Devops::Env::MSWin::MSYS2 {
+	our $PERL_PATH;
+
 	sub run_under_mingw {
 		my ($cmd) = @_;
 		my $msystem_lc = lc $ENV{MSYSTEM};
-		local $ENV{PATH} = "C:\\$ENV{MSYS2_DIR}\\$msystem_lc\\bin;C:\\$ENV{MSYS2_DIR}\\usr\\bin;$ENV{PATH}";
+		local $ENV{PATH} = "C:\\$ENV{MSYS2_DIR}\\$msystem_lc\\bin;C:\\$ENV{MSYS2_DIR}\\usr\\bin;@{[ $PERL_PATH ? $PERL_PATH . ';' : '' ]}$ENV{PATH}";
 		return $main::runner->system( qw(bash -c), $cmd);
 	}
 
@@ -806,9 +808,15 @@ EOF
 	}
 
 	sub pre_perl {
+		my ($system) = @_;
 		run_under_mingw( <<EOF );
 			pacman -S --needed --noconfirm mingw-w64-x86_64-perl;
 			perl -V;
+EOF
+
+		$PERL_PATH = $system->perl_path;
+
+		run_under_mingw( <<EOF );
 			pl2bat `which pl2bat`;
 			yes | cpan App::cpanminus;
 			cpanm --notest ExtUtils::MakeMaker Module::Build App::pmuninstall;
@@ -906,6 +914,23 @@ EOF
 		if( ! $repo->main_repo ) {
 			$repo->save_commit_hash_to_config;
 		}
+	}
+
+	sub perl_path {
+		my ($system) = @_;
+
+		my $msystem_lc = lc $ENV{MSYSTEM};
+		local $ENV{PATH} = "C:\\$ENV{MSYS2_DIR}\\$msystem_lc\\bin;C:\\$ENV{MSYS2_DIR}\\usr\\bin;$ENV{PATH}";
+
+		chomp( my $site_bin   = `perl -MConfig -E "say \$Config{sitebin}"` );
+		chomp( my $vendor_bin = `perl -MConfig -E "say \$Config{vendorbin}"` );
+		my @perl_bins = ( $site_bin, $vendor_bin, '/mingw64/bin/core_perl' );
+		my @perl_bins_w;
+		for my $path_orig ( @perl_bins ) {
+			chomp(my $path = `cygpath -w '$path_orig'`);
+			push @perl_bins_w, $path;
+		}
+		join ";", @perl_bins_w;
 	}
 
 	sub cygpath {
