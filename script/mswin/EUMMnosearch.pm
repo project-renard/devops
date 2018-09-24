@@ -2,7 +2,7 @@ package EUMMnosearch;
 
 package main;
 # only run when we call the Makefile.PL script
-if( $0 eq "Makefile.PL"  ) {
+if( $0 eq "Makefile.PL" || $0 eq "./Makefile.PL"  ) {
 	require ExtUtils::MakeMaker;
 
 	my $i = ExtUtils::MakeMaker->can("import");
@@ -35,10 +35,10 @@ if( $0 eq "Makefile.PL"  ) {
 		};
 	};
 
-        do "Makefile.PL" or die "Hack failed: $@";
+	do $0 or die "Hack failed: $@";
 
-        # we can exit now that we are done
-        exit 0;
+	# we can exit now that we are done
+	exit 0;
 }
 
 1;
