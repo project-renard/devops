@@ -805,6 +805,10 @@ EOF
 		cp -pv /mingw64/bin/gcc /mingw64/bin/cc
 		cp -pv /usr/bin/make /usr/bin/gmake
 EOF
+
+		# Workaround for Data::UUID installation problem.
+		# See <https://github.com/rjbs/Data-UUID/issues/24>.
+		mkdir 'C:\tmp';
 	}
 
 	sub pre_perl {
