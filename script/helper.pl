@@ -803,7 +803,7 @@ EOF
 		# There is not a corresponding cc for the mingw64 gcc. So we copy it in place.
 		run_under_mingw( <<'EOF' );
 		cp -pv /mingw64/bin/gcc /mingw64/bin/cc
-		cp -pv /usr/bin/make /usr/bin/gmake
+		cp -pv /mingw64/bin/mingw32-make /mingw64/bin/gmake
 EOF
 
 		# Workaround for Data::UUID installation problem.
@@ -869,7 +869,7 @@ EOF
 		local $devops_dir = "../external/project-renard/devops";
 		return <<EOF;
 			. \$APPVEYOR_BUILD_FOLDER/$devops_dir/script/mswin/EUMMnosearch.sh;
-			#export MAKEFLAGS='-j4 -P4';
+			export MAKEFLAGS='-j4 -P4';
 EOF
 	}
 
