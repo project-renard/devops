@@ -4,6 +4,7 @@ package main;
 # only run when we call the Makefile.PL script
 if( $0 eq "Makefile.PL" || $0 eq "./Makefile.PL"  ) {
 	require ExtUtils::MakeMaker;
+	require ExtUtils::Liblist::Kid;
 
 	my $i = ExtUtils::MakeMaker->can("import");
 	no warnings "redefine";
@@ -33,6 +34,27 @@ if( $0 eq "Makefile.PL" || $0 eq "./Makefile.PL"  ) {
 			print "LIBS: $args{LIBS}\n";
 			$wm->(%args);
 		};
+	};
+
+	*ExtUtils::Liblist::Kid::_win32_search_file = sub {
+		my ( $thislib, $libext, $paths, $verbose, $GC ) = @_;
+
+		my @file_list = ExtUtils::Liblist::Kid::_win32_build_file_list( $thislib, $GC, $libext );
+
+		for my $path ( @{$paths} ) {
+			for my $lib_file ( @file_list ) {
+				my $fullname = $lib_file;
+				$fullname = "$path\\$fullname" if $path;
+				print $fullname, "\n";
+				print `ls $fullname`, "\n";
+
+				return ( $fullname, $path ) if -f $fullname;
+
+				ExtUtils::Liblist::Kid::_debug( "'$thislib' not found as '$fullname'\n", $verbose );
+			}
+		}
+
+		return;
 	};
 
 	do $0 or die "Hack failed: $@";
