@@ -954,6 +954,8 @@ EOF
 	sub repo_test {
 		my ($system, $repo) = @_;
 
+		$PERL_PATH = $system->perl_path;
+
 		my $repo_path = $system->get_repo_path_cygwin($repo);
 		my $ret = run_under_mingw( <<EOF );
 			cd $repo_path;
