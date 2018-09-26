@@ -840,9 +840,11 @@ EOF
 		# <https://github.com/Alexpux/MINGW-packages/commit/fdea2f9>
 		# <https://github.com/Homebrew/homebrew-core/issues/10920>
 		local $ENV{MSYS2_FC_CACHE_SKIP} = 1;
-		run_under_mingw( <<"EOF" );
-			pacman -S --needed --noconfirm @$deps;
+		eval {
+			run_under_mingw( <<"EOF" );
+				pacman -S --needed --noconfirm @$deps;
 EOF
+		};
 	}
 
 	sub pre_install_dzil {
