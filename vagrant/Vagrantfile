@@ -113,21 +113,21 @@ def add_synced_folders( config, org_toplevel, options = {} )
 
 				p5-Renard-Boteh
 				p5-Renard-Incunabula
-				p5-Renard-Incunabula-Cairo
+				p5-Renard-API-Cairo
 				p5-Renard-Incunabula-Document
-				p5-Renard-Incunabula-Format-Cairo
-				p5-Renard-Incunabula-Format-OOXML
-				p5-Renard-Incunabula-Format-PDF
-				p5-Renard-Incunabula-Frontend-Gtk3
-				p5-Renard-Incunabula-Glib
-				p5-Renard-Incunabula-Language-EN
-				p5-Renard-Incunabula-MuPDF-Inline
-				p5-Renard-Incunabula-MuPDF-mutool
-				p5-Renard-Incunabula-Source-DICT
-				p5-Renard-Incunabula-Source-Google-Scholar
-				p5-Renard-Incunabula-Source-Google-Translate
-				p5-Renard-Incunabula-Source-MediaWiki
-				p5-Renard-Incunabula-Speech-Synthesis
+				p5-Renard-Block-Format-Cairo
+				p5-Renard-Block-Format-OOXML
+				p5-Renard-Block-Format-PDF
+				p5-Renard-API-Gtk3
+				p5-Renard-API-Glib
+				p5-Renard-Block-NLP
+				p5-Renard-API-MuPDF-Inline
+				p5-Renard-API-MuPDF-mutool
+				p5-Renard-Block-DICT
+				p5-Renard-Block-Google-Scholar
+				p5-Renard-Block-Google-Translate
+				p5-Renard-Block-MediaWiki
+				p5-Renard-Block-Speech-Synthesis
 				p5-Renard-Jacquard
 				p5-Renard-Taffeta
 				p5-Renard-Yarn
