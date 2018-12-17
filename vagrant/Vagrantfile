@@ -266,10 +266,10 @@ end
 		win10.ssh.insert_key = true
 
 		win10.vm.provision "Install Chocolatey", type: "local_shell", command: <<~SHELL
-			vagrant ssh win10 -- "PowerShell -Command 'Set-ExecutionPolicy Bypass -Scope Process -Force; iwr https://chocolatey.org/install.ps1 -UseBasicParsing | iex'"
-			vagrant ssh win10 -- 'export PATH="$PATH:/cygdrive/c/ProgramData/chocolatey/bin"; choco install -y --allowemptychecksum strawberryperl'
-			vagrant ssh win10 -- 'export PATH="$PATH:/cygdrive/c/ProgramData/chocolatey/bin"; choco install -y --allowemptychecksum git'
-			vagrant ssh win10 -- 'export PATH="$PATH:/cygdrive/c/ProgramData/chocolatey/bin"; choco install -y --allowemptychecksum msys2 --params " /InstallDir:C:/msys64"'
+			sshpass -p 'Passw0rd!' vagrant ssh win10 -- "PowerShell -Command 'Set-ExecutionPolicy Bypass -Scope Process -Force; iwr https://chocolatey.org/install.ps1 -UseBasicParsing | iex'"
+			sshpass -p 'Passw0rd!' vagrant ssh win10 -- 'export PATH="$PATH:/cygdrive/c/ProgramData/chocolatey/bin"; choco install -y --allowemptychecksum strawberryperl'
+			sshpass -p 'Passw0rd!' vagrant ssh win10 -- 'export PATH="$PATH:/cygdrive/c/ProgramData/chocolatey/bin"; choco install -y --allowemptychecksum git'
+			sshpass -p 'Passw0rd!' vagrant ssh win10 -- 'export PATH="$PATH:/cygdrive/c/ProgramData/chocolatey/bin"; choco install -y --allowemptychecksum msys2 --params " /InstallDir:C:/msys64"'
 		SHELL
 
 		## Start VBoxSDL:
