@@ -251,6 +251,7 @@ end
 		# Do not need to use password authentication since we will install our own key.
 		#win10.ssh.password = "Passw0rd!"
 		win10.ssh.private_key_path = '.id_vagrant'
+		win10.vm.boot_timeout = 2
 
 		# This does not work, so we use the SSH pipe approach.
 		#config.vm.provision "file", source: ".id_vagrant.pub", destination: "~/.ssh/authorized_keys"
