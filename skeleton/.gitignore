@@ -1,2 +1,2 @@
-# Renard-TODO-*
+{{ $dist->name }}-*
 external/
